@@ -269,11 +269,11 @@ export class AIClient {
     const processedMessages: AIMessages[] = await Promise.all(messages.map(async (msg): Promise<AIMessages> => {
       if (Array.isArray(msg.content)) {
         const newContent: AiContentItem[] = await Promise.all(msg.content.map(async (item): Promise<AiContentItem> => {
-          if (item.type === 'image_url' && item.image_url && item.image_url.url.startsWith('/storage/')) {
+          if (item.type === 'image_url' && item.image_url && (item.image_url.url.startsWith('/workspace/') || item.image_url.url.startsWith('/storage/'))) {
             try {
               const relativePath = item.image_url.url;
-              const cleanPath = relativePath.startsWith('/storage') ? relativePath.substring(8) : relativePath;
-              const fullPath = path.join(config.storageDir, cleanPath);
+              const cleanPath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
+              const fullPath = path.join(process.cwd(), cleanPath);
               const fileData = await fsp.readFile(fullPath);
               const base64 = fileData.toString('base64');
               const mimeType = 'image/jpeg';
@@ -382,7 +382,7 @@ export class AIClient {
   /**
    * Process and resize incoming images
    */
-  async processImage(imageData: { base64: string, url: string }, logger?: any): Promise<{ filePath: string, base64Image: string }> {
+  async processImage(imageData: { base64: string, url: string }, sessionId?: string, logger?: any): Promise<{ filePath: string, base64Image: string }> {
     try {
       const matches = imageData.base64.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
       const data = matches ? matches[2] : imageData.base64;
@@ -401,15 +401,18 @@ export class AIClient {
       // Convert to base64
       const base64Image = `data:image/jpeg;base64,${resized.toString('base64')}`;
 
-      //save image to file
+      // Save image to session workspace
+      const sessionFolderName = (sessionId && (sessionId.startsWith('session_') || sessionId.startsWith('telegram_')))
+        ? sessionId
+        : `session_${sessionId || 'global'}`;
       const filename = `${Date.now()}.jpg`;
-      const imagesDir = path.join(config.storageDir, 'images');
+      const imagesDir = path.join(process.cwd(), config.workspaceDir || 'workspace', sessionFolderName, 'images');
       await fsp.mkdir(imagesDir, { recursive: true });
       const fullPath = path.join(imagesDir, filename);
       await fsp.writeFile(fullPath, resized);
 
       // Return relative path for frontend use
-      const filePath = `/storage/images/${filename}`;
+      const filePath = `/workspace/${sessionFolderName}/images/${filename}`;
 
       return { filePath, base64Image };
 

@@ -42,8 +42,7 @@ export const config = {
     }
   },
 
-  storageDir: 'storage',
-  generatedImagesDir: 'storage/generated'
+  workspaceDir: 'workspace'
 };
 
 // Load dynamic config from config.json if it exists

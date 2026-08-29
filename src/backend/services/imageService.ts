@@ -13,8 +13,8 @@ import logger from '../utils/logger.js';
 // ==================== Types ====================
 
 interface ImageGenerationResponse {
-  relativePath: string; // Relative path from public directory (e.g., /storage/generated/image.png)
-  fullPath: string; // Full system path (e.g., E:\AILab\NodeProjects\talktoaimeApp\public\storage\generated\image.png)
+  relativePath: string; // Relative path from server root (e.g., /workspace/session_xxx/images/image.png)
+  fullPath: string; // Full system path (e.g., E:\AILab\NodeProjects\OpenPAIAgent\workspace\session_xxx\images\image.png)
 }
 
 interface TogetherImageResponse {
@@ -76,10 +76,21 @@ const TOGETHER_SIZES = [
 export class ImageService {
 
   constructor() {
-    if (!nodeFs.existsSync(config.generatedImagesDir)) {
-      nodeFs.mkdirSync(config.generatedImagesDir, { recursive: true });
+    const workspaceDir = nodePath.join(process.cwd(), config.workspaceDir || 'workspace');
+    if (!nodeFs.existsSync(workspaceDir)) {
+      nodeFs.mkdirSync(workspaceDir, { recursive: true });
     }
-    // logger.debug({ dir: config.generatedImagesDir }, '[Image] Image service initialized');
+  }
+
+  private getSessionImagesDir(sessionId?: string): { sessionFolderName: string; fullDir: string } {
+    const sessionFolderName = (sessionId && (sessionId.startsWith('session_') || sessionId.startsWith('telegram_')))
+      ? sessionId
+      : `session_${sessionId || 'global'}`;
+    const fullDir = nodePath.join(process.cwd(), config.workspaceDir || 'workspace', sessionFolderName, 'images');
+    if (!nodeFs.existsSync(fullDir)) {
+      nodeFs.mkdirSync(fullDir, { recursive: true });
+    }
+    return { sessionFolderName, fullDir };
   }
 
   /**
@@ -89,7 +100,8 @@ export class ImageService {
     prompt: string,
     aspectRatio: string = DEFAULT_ASPECT_RATIO,
     steps?: number,
-    provider: 'together' | 'xai' = 'together'
+    provider: 'together' | 'xai' = 'together',
+    sessionId?: string
   ): Promise<ImageGenerationResponse> {
     if (!prompt?.trim()) {
       throw new Error('Prompt cannot be empty');
@@ -121,28 +133,32 @@ export class ImageService {
     }
 
     if (activeProvider === 'xai') {
-      return this.generateWithXAI(prompt, aspectRatio);
+      return this.generateWithXAI(prompt, aspectRatio, sessionId);
     } else {
       const rawSteps = (typeof steps === 'number' && !isNaN(steps)) ? steps : (config.images.together as any)?.steps;
       const togetherSteps = (typeof rawSteps === 'number' && !isNaN(rawSteps) && rawSteps > 0) ? rawSteps : undefined;
-      return this.generateWithTogether(prompt, aspectRatio, togetherSteps);
+      return this.generateWithTogether(prompt, aspectRatio, togetherSteps, sessionId);
     }
   }
 
   /**
-   * List all generated images
+   * List all generated images for a session
    */
-  async listGeneratedImages(): Promise<Array<{ name: string, url: string, date: Date, size: number }>> {
+  async listGeneratedImages(sessionId?: string): Promise<Array<{ name: string, url: string, date: Date, size: number }>> {
     try {
-      const files = nodeFs.readdirSync(config.generatedImagesDir);
+      const { sessionFolderName, fullDir } = this.getSessionImagesDir(sessionId);
+      if (!nodeFs.existsSync(fullDir)) {
+        return [];
+      }
+      const files = nodeFs.readdirSync(fullDir);
       const images = files
         .filter(file => /\.(png|jpg|jpeg|webp)$/i.test(file))
         .map(file => {
-          const filepath = nodePath.join(config.generatedImagesDir, file);
+          const filepath = nodePath.join(fullDir, file);
           const stats = nodeFs.statSync(filepath);
           return {
             name: file,
-            url: `/storage/generated/${file}`,
+            url: `/workspace/${sessionFolderName}/images/${file}`,
             date: stats.mtime,
             size: stats.size
           };
@@ -159,9 +175,10 @@ export class ImageService {
   /**
    * Delete a generated image
    */
-  async deleteImage(filename: string): Promise<void> {
+  async deleteImage(filename: string, sessionId?: string): Promise<void> {
     const safeFilename = nodePath.basename(filename);
-    const filepath = nodePath.join(config.generatedImagesDir, safeFilename);
+    const { fullDir } = this.getSessionImagesDir(sessionId);
+    const filepath = nodePath.join(fullDir, safeFilename);
 
     if (nodeFs.existsSync(filepath)) {
       nodeFs.unlinkSync(filepath);
@@ -179,7 +196,8 @@ export class ImageService {
   private async generateWithTogether(
     prompt: string,
     aspectRatio: string,
-    steps?: number
+    steps?: number,
+    sessionId?: string
   ): Promise<ImageGenerationResponse> {
     if (!config.images.together?.key) {
       throw new Error('Together API key not configured');
@@ -232,8 +250,9 @@ export class ImageService {
       }
 
       const imageUrl = imageData.url || this.base64ToDataUrl(imageData.base64 ?? '');
-      const localPath = await this.downloadImage(imageUrl);
-      const relativePath = '/storage/generated/' + nodePath.basename(localPath);
+      const { sessionFolderName, fullDir } = this.getSessionImagesDir(sessionId);
+      const localPath = await this.downloadImage(imageUrl, fullDir);
+      const relativePath = `/workspace/${sessionFolderName}/images/` + nodePath.basename(localPath);
 
       logger.info({ localPath }, '[Image] Generated image successfully');
 
@@ -253,7 +272,8 @@ export class ImageService {
 
   private async generateWithXAI(
     prompt: string,
-    aspectRatio: string
+    aspectRatio: string,
+    sessionId?: string
   ): Promise<ImageGenerationResponse> {
     if (!config.images.xai?.key) {
       throw new Error('XAI API key not configured');
@@ -287,8 +307,9 @@ export class ImageService {
         throw new Error('No image URL received from XAI');
       }
 
-      const localPath = await this.downloadImage(imageData.url);
-      const relativePath = '/storage/generated/' + nodePath.basename(localPath);
+      const { sessionFolderName, fullDir } = this.getSessionImagesDir(sessionId);
+      const localPath = await this.downloadImage(imageData.url, fullDir);
+      const relativePath = `/workspace/${sessionFolderName}/images/` + nodePath.basename(localPath);
 
       logger.info({ localPath }, '[Image] Generated image successfully');
 
@@ -306,9 +327,9 @@ export class ImageService {
     }
   }
 
-  private async downloadImage(imageUrl: string): Promise<string> {
+  private async downloadImage(imageUrl: string, targetDir: string): Promise<string> {
     const filename = `img_${crypto.randomUUID()}.png`;
-    const filepath = nodePath.join(config.generatedImagesDir, filename);
+    const filepath = nodePath.join(targetDir, filename);
 
     try {
       if (imageUrl.startsWith('data:')) {
@@ -339,9 +360,8 @@ export class ImageService {
    * Get image as base64 for AI vision
    */
   async getImageAsBase64(imagePath: string): Promise<string> {
-    const fullPath = imagePath.startsWith('/storage/')
-      ? nodePath.join(process.cwd(), imagePath)
-      : imagePath;
+    const cleanPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+    const fullPath = nodePath.isAbsolute(imagePath) ? imagePath : nodePath.join(process.cwd(), cleanPath);
 
     // Security check: prevent path traversal attacks
     const normalizedPath = nodePath.normalize(fullPath);
@@ -358,16 +378,19 @@ export class ImageService {
   /**
    * Delete old images (cleanup)
    */
-  cleanupOldImages(maxAgeHours = 24): void {
+  cleanupOldImages(maxAgeHours = 24, sessionId?: string): void {
     try {
       const now = Date.now();
       const maxAgeMs = maxAgeHours * 60 * 60 * 1000;
+      const { fullDir } = this.getSessionImagesDir(sessionId);
 
-      const files = nodeFs.readdirSync(config.generatedImagesDir);
+      if (!nodeFs.existsSync(fullDir)) return;
+
+      const files = nodeFs.readdirSync(fullDir);
       let deletedCount = 0;
 
       for (const file of files) {
-        const filepath = nodePath.join(config.generatedImagesDir, file);
+        const filepath = nodePath.join(fullDir, file);
         const stats = nodeFs.statSync(filepath);
 
         if (now - stats.mtimeMs > maxAgeMs) {

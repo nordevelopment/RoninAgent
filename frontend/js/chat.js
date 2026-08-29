@@ -48,7 +48,7 @@ class AIAgentChat {
                 title = obj.title;
                 text = obj.text;
             }
-            if (href && href.startsWith('/storage/')) {
+            if (href && (href.startsWith('/workspace/') || href.startsWith('/storage/')) && /\.(png|jpg|jpeg|webp|gif|svg)$/i.test(href)) {
                 return `<div class="message-image-container"><a href="${href}" target="_blank"><img src="${href}" class="chat-message-image" alt="${text || ''}" /></a></div>`;
             }
             return `<a href="${href || ''}" title="${title || ''}" target="_blank" rel="noopener noreferrer">${text || ''}</a>`;
@@ -834,8 +834,8 @@ class AIAgentChat {
             }
             let processedContent = content;
             if (type === 'agent') {
-                const storagePathRegex = /`?(\/?storage[/\\](?:generated|images)[/\\][a-zA-Z0-9._-]+\.(?:png|jpg|jpeg|webp))`?/gi;
-                processedContent = processedContent.replace(storagePathRegex, (match, pathGroup, offset) => {
+                const imagePathRegex = /`?(\/?(?:workspace|storage)[/\\][a-zA-Z0-9._\-\/\\]+\.(?:png|jpg|jpeg|webp))`?/gi;
+                processedContent = processedContent.replace(imagePathRegex, (match, pathGroup, offset) => {
                     let cleanPath = pathGroup.replace(/\\/g, '/');
                     if (!cleanPath.startsWith('/')) {
                         cleanPath = '/' + cleanPath;

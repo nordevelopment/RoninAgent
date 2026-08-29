@@ -1,5 +1,6 @@
 import Fastify, { FastifyInstance, LogController } from 'fastify';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import basicAuth from '@fastify/basic-auth';
@@ -166,9 +167,14 @@ export async function buildApp(): Promise<FastifyInstance> {
       db.close();
     });
 
+    const workspaceRoot = path.join(process.cwd(), 'workspace');
+    if (!fs.existsSync(workspaceRoot)) {
+      fs.mkdirSync(workspaceRoot, { recursive: true });
+    }
+
     await app.register(staticPlugin, {
-      root: path.join(__dirname, '../../storage'),
-      prefix: '/storage/',
+      root: workspaceRoot,
+      prefix: '/workspace/',
       decorateReply: false,
     });
 

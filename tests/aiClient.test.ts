@@ -207,7 +207,7 @@ describe('AIClient Tests', () => {
   });
 
   describe('Local image URL transformation to Base64', () => {
-    it('reads local /storage image and converts to base64 data url', async () => {
+    it('reads local /workspace session image and converts to base64 data url', async () => {
       const mockBuffer = Buffer.from('fake-image-bytes');
       vi.spyOn(fsp, 'readFile').mockResolvedValueOnce(mockBuffer);
 
@@ -222,7 +222,7 @@ describe('AIClient Tests', () => {
           role: 'user',
           content: [
             { type: 'text', text: 'Describe this image' },
-            { type: 'image_url', image_url: { url: '/storage/images/photo.jpg' } }
+            { type: 'image_url', image_url: { url: '/workspace/session_test/images/photo.jpg' } }
           ]
         }
       ];

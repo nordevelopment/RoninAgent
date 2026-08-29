@@ -24,6 +24,6 @@ When asked to draw, paint, design, generate, or create an image, picture, photo,
      - `1:1` for avatars, icons, square cards, or when the layout requires square proportions.
      - `3:2` or `4:3` for traditional photo compositions.
 4. **Display the Generated Image**:
-   - The `generate_image` tool returns a relative path (e.g., `/storage/images/123.jpg`).
+   - The `generate_image` tool returns a relative path .
    - You MUST embed the generated image in your response using markdown syntax: `![Caption](relative_path)`.
    - Provide a short, engaging description of the image in your chat message alongside the embedded image.

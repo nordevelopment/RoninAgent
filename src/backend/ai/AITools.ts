@@ -346,7 +346,8 @@ export class AITools {
           args.prompt as string,
           args.aspectRatio as string | undefined,
           args.steps as number | undefined,
-          args.provider as 'together' | 'xai' | undefined
+          args.provider as 'together' | 'xai' | undefined,
+          sessionId
         );
         break;
       case 'save_memory':

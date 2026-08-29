@@ -119,7 +119,7 @@ export class ChatManager {
 
     if (imageBase64) {
       try {
-        const processed = await this.aiClient.processImage({ base64: imageBase64, url: '' });
+        const processed = await this.aiClient.processImage({ base64: imageBase64, url: '' }, sessionId, logger);
         finalContent = [
           { type: 'text', text: textPrompt || 'What is this image? Describe it in details.' },
           { type: 'image_url', image_url: { url: processed.filePath } }

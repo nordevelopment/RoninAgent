@@ -22,7 +22,7 @@ describe('ImageService Tests', () => {
     imageService = new ImageService();
 
     // Mock downloadImage to return a mock local path
-    vi.spyOn(imageService as any, 'downloadImage').mockResolvedValue('storage/generated/mock_img.png');
+    vi.spyOn(imageService as any, 'downloadImage').mockResolvedValue('workspace/session_global/images/mock_img.png');
   });
 
   describe('Validation', () => {
@@ -59,7 +59,7 @@ describe('ImageService Tests', () => {
       expect(payload.steps).toBeUndefined();
       expect('steps' in payload).toBe(false); // Key MUST NOT exist in payload for Seedream
       expect(options.headers.Authorization).toBe('Bearer test-together-key');
-      expect(result.relativePath).toBe('/storage/generated/mock_img.png');
+      expect(result.relativePath).toBe('/workspace/session_global/images/mock_img.png');
     });
 
     it('omits steps when steps is null or NaN', async () => {
@@ -138,7 +138,7 @@ describe('ImageService Tests', () => {
       expect(url).toBe('https://api.x.ai/v1/images/generations');
       expect(payload.model).toBe('grok-imagine-image');
       expect(payload.aspect_ratio).toBe('16:9');
-      expect(result.relativePath).toBe('/storage/generated/mock_img.png');
+      expect(result.relativePath).toBe('/workspace/session_global/images/mock_img.png');
     });
   });
 });

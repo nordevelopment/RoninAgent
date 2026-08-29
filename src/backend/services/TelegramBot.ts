@@ -172,8 +172,8 @@ export class TelegramBot {
 
       const content = response.content;
 
-      // Regex that matches either a markdown image OR a raw storage path (with optional backticks/quotes)
-      const splitRegex = /(!\[.*?\]\(.*?\)|`?\b\/?storage\/generated\/img_[a-f0-9-]+\.(?:png|jpg|jpeg|webp)\b`?)/gi;
+      // Regex that matches either a markdown image OR a raw workspace/storage path (with optional backticks/quotes)
+      const splitRegex = /(!\[.*?\]\(.*?\)|`?\b\/?(?:workspace|storage)\/[a-zA-Z0-9_\-\/]+\.(?:png|jpg|jpeg|webp)\b`?)/gi;
       const parts = content.split(splitRegex);
 
       for (const part of parts) {
@@ -199,7 +199,7 @@ export class TelegramBot {
         }
 
         // Check if this part is a raw path (possibly enclosed in backticks or quotes)
-        const pathMatch = /`?\b\/?(storage\/generated\/img_[a-f0-9-]+\.(?:png|jpg|jpeg|webp))\b`?/i.exec(trimmed);
+        const pathMatch = /`?\b\/?((?:workspace|storage)\/[a-zA-Z0-9_\-\/]+\.(?:png|jpg|jpeg|webp))\b`?/i.exec(trimmed);
         if (pathMatch) {
           const cleanPath = pathMatch[1];
           const absolutePath = path.resolve(process.cwd(), cleanPath);
