@@ -21,7 +21,7 @@ export const config = {
   AI_TOP_P: process.env.AI_TOP_P || 0.9,
   AI_TIMEOUT: 180000,
   AI_MAX_FILE_READ_SIZE: parseInt(process.env.AI_MAX_FILE_READ_SIZE || '1048576'),
-  AI_MAX_THINKING_STEPS: parseInt(process.env.AI_MAX_THINKING_STEPS || '25'),
+  AI_MAX_THINKING_STEPS: parseInt(process.env.AI_MAX_THINKING_STEPS || '30'),
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
   ALLOWED_TELEGRAM_USER_IDS: process.env.ALLOWED_TELEGRAM_USER_IDS || '',
 
@@ -33,7 +33,7 @@ export const config = {
       key: process.env.TOGETHER_API_KEY || '',
       url: process.env.TOGETHER_API_URL || 'https://api.together.xyz/v1/images/generations',
       model: process.env.TOGETHER_IMAGE_MODEL || 'black-forest-labs/FLUX.2-dev',
-      steps: parseInt(process.env.IMAGE_GENERATION_STEPS || '26')
+      steps: process.env.IMAGE_GENERATION_STEPS ? parseInt(process.env.IMAGE_GENERATION_STEPS, 10) : undefined
     },
     xai: {
       key: process.env.XAI_API_KEY || '',
@@ -80,14 +80,17 @@ if (fs.existsSync(configJsonPath)) {
       if (parsed.together_image_model) {
         config.images.together.model = parsed.together_image_model;
       }
+      if (parsed.together_image_steps) {
+        config.images.together.steps = parseInt(parsed.together_image_steps, 10);
+      }
       if (parsed.xai_api_key) {
         config.images.xai.key = parsed.xai_api_key;
       }
       if (parsed.ai_max_file_read_size) {
-        config.AI_MAX_FILE_READ_SIZE = parseInt(parsed.ai_max_file_read_size, 25);
+        config.AI_MAX_FILE_READ_SIZE = parseInt(parsed.ai_max_file_read_size, 10);
       }
       if (parsed.ai_max_thinking_steps) {
-        config.AI_MAX_THINKING_STEPS = parseInt(parsed.ai_max_thinking_steps, 25);
+        config.AI_MAX_THINKING_STEPS = parseInt(parsed.ai_max_thinking_steps, 10);
       }
     }
   } catch (err) {

@@ -57,20 +57,20 @@ interface XAIPayload {
 // ==================== Constants ====================
 
 const VALID_ASPECT_RATIOS = [
-  '1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3',
+  '16:9', '9:16', '3:2', '2:3', '1:1', '4:3', '3:4',
   '2:1', '1:2', '20:9', '9:20'
 ] as const;
 
 const DEFAULT_ASPECT_RATIO: string = '2:3';
 
 const TOGETHER_SIZES = [
-  { ratio: '1:1', width: 1024, height: 1024 },
   { ratio: '16:9', width: 1344, height: 768 },
   { ratio: '9:16', width: 768, height: 1344 },
-  { ratio: '4:3', width: 1152, height: 864 },
-  { ratio: '3:4', width: 864, height: 1152 },
   { ratio: '3:2', width: 1200, height: 800 },
   { ratio: '2:3', width: 800, height: 1200 },
+  { ratio: '1:1', width: 1024, height: 1024 },
+  { ratio: '4:3', width: 1152, height: 864 },
+  { ratio: '3:4', width: 864, height: 1152 },
 ] as const;
 
 export class ImageService {
@@ -123,7 +123,8 @@ export class ImageService {
     if (activeProvider === 'xai') {
       return this.generateWithXAI(prompt, aspectRatio);
     } else {
-      const togetherSteps = steps !== undefined ? steps : (config.images.together as any).steps;
+      const rawSteps = (typeof steps === 'number' && !isNaN(steps)) ? steps : (config.images.together as any)?.steps;
+      const togetherSteps = (typeof rawSteps === 'number' && !isNaN(rawSteps) && rawSteps > 0) ? rawSteps : undefined;
       return this.generateWithTogether(prompt, aspectRatio, togetherSteps);
     }
   }
@@ -184,20 +185,34 @@ export class ImageService {
       throw new Error('Together API key not configured');
     }
 
+    const effectiveSteps = (typeof steps === 'number' && !isNaN(steps) && steps > 0)
+      ? steps
+      : ((typeof (config.images.together as any)?.steps === 'number' && !isNaN((config.images.together as any)?.steps) && (config.images.together as any)?.steps > 0)
+          ? (config.images.together as any).steps
+          : undefined);
+
+    const modelName = config.images.together.model || '';
+    const supportsSteps = !/seedream|recraft/i.test(modelName);
+
     const payload: TogetherPayload = {
-      model: config.images.together.model,
+      model: modelName,
       prompt,
       n: 1,
       width: TOGETHER_SIZES.find(s => s.ratio === aspectRatio)?.width || 1024,
       height: TOGETHER_SIZES.find(s => s.ratio === aspectRatio)?.height || 1024
     };
 
-    if (steps !== undefined) {
-      payload.steps = steps;
+    if (supportsSteps && effectiveSteps !== undefined) {
+      // For FLUX schnell, max steps is 4
+      if (/schnell/i.test(modelName) && effectiveSteps > 4) {
+        payload.steps = 4;
+      } else {
+        payload.steps = effectiveSteps;
+      }
     }
 
     try {
-      logger.info({ prompt: prompt.slice(0, 50) + '...' }, '[Image] Generating with Together');
+      logger.info({ prompt: prompt.slice(0, 50) + '...', model: modelName }, '[Image] Generating with Together');
 
       const response = await axios.post<TogetherImageResponse>(
         config.images.together.url!,
@@ -207,7 +222,7 @@ export class ImageService {
             'Authorization': `Bearer ${config.images.together.key}`,
             'Content-Type': 'application/json'
           },
-          timeout: 45000 // 45 seconds timeout for image generation
+          timeout: 90000 // 90 seconds timeout for image generation
         }
       );
 

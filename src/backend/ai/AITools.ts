@@ -573,9 +573,8 @@ export class AITools {
               steps: {
                 type: 'integer',
                 minimum: 1,
-                maximum: 30,
-                default: 25,
-                description: 'The number of steps (quality/time trade-off).'
+                maximum: 50,
+                description: 'Optional number of steps (quality/time trade-off).'
               },
               provider: {
                 type: 'string',
