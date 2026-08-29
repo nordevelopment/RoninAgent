@@ -144,8 +144,6 @@ export class TelegramBot {
     const userMessage = message.text;
     //const username = ctx.from?.username || 'unknown';
 
-    // console.log(`[Telegram] User: ${username} (${userId}), Message: ${userMessage}`);
-
     try {
       if (!this.chatManager) {
         await ctx.reply('AI service is not available');

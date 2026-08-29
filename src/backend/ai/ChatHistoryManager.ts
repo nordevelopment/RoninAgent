@@ -23,7 +23,7 @@ export class ChatHistoryManager {
    * @returns array of messages
    */
   async getHistory(sessionId: string): Promise<AIMessages[]> {
-    // console.log('ChatHistoryManager: getHistory called', { sessionId });
+
     const messages = await this.messageModel.findBySessionId(sessionId);
     return messages.map(msg => {
       let content: any = msg.content;
@@ -54,7 +54,6 @@ export class ChatHistoryManager {
    * @param message - message to add
    */
   async addMessage(sessionId: string, message: AIMessages): Promise<void> {
-    // console.log('ChatHistoryManager: addMessage called', { sessionId, message });
 
     // Ensure session exists
     const session = await this.sessionModel.findById(sessionId);
@@ -83,7 +82,6 @@ export class ChatHistoryManager {
    * @param sessionId - session ID
    */
   async clearHistory(sessionId: string): Promise<void> {
-    // console.log('ChatHistoryManager: clearHistory called', { sessionId });
     await this.messageModel.deleteBySessionId(sessionId);
   }
 

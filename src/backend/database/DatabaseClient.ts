@@ -147,7 +147,6 @@ export class DatabaseClient {
       const values = Object.values(where);
 
       const sql = `DELETE FROM ${table} WHERE ${whereClause}`;
-      //console.log(sql);
       const stmt = this.db.prepare(sql);
       const result = stmt.run(...values);
 
