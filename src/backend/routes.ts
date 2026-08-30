@@ -522,7 +522,7 @@ export async function registerRoutes(app: FastifyInstance, chatManager: ChatMana
       providers: getAIProvidersList(),
       hasAiApiKey: !!config.AI_API_KEY,
       aiApiUrl: config.AI_API_URL || 'https://openrouter.ai/api/v1/chat/completions',
-      aiDefaultModel: config.AI_DEFAULT_MODEL || 'qwen/qwen3.8-flash',
+      aiDefaultModel: config.AI_DEFAULT_MODEL || 'qwen/qwen3.5-flash-02-23',
       hasTelegramBotToken: !!config.TELEGRAM_BOT_TOKEN,
       allowedTelegramUserIds: config.ALLOWED_TELEGRAM_USER_IDS || '',
       appUser: config.APP_USER || 'admin',

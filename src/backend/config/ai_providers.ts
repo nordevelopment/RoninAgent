@@ -17,7 +17,7 @@ export const AI_PROVIDERS: Record<string, AIProvider> = {
     id: 'openrouter',
     name: 'OpenRouter.ai (Default)',
     baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
-    defaultModel: 'qwen/qwen3.8-flash',
+    defaultModel: 'qwen/qwen3.5-flash-02-23',
     requiresApiKey: true,
     isOpenAICompatible: true,
     description: 'Unified API gateway for 200+ AI models'

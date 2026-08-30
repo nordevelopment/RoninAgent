@@ -81,7 +81,7 @@ class SystemSettings {
 
                 // Set placeholders and values
                 this.settingsAiApiUrl.value = settings.aiApiUrl || '';
-                this.settingsAiDefaultModel.value = settings.aiDefaultModel || 'qwen/qwen3.8-flash';
+                this.settingsAiDefaultModel.value = settings.aiDefaultModel || 'qwen/qwen3.5-flash-02-23';
 
                 this.syncProviderSelectFromUrl();
 

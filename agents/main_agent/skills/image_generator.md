@@ -1,4 +1,4 @@
-Keywords: image, picture, draw, paint, art, photo, illustration, картинка, нарисуй, изображения, изображений, изображению, изображение, арт, фото, рисунок, иллюстрация
+Keywords: image, picture, draw, paint, photo, illustration, нарисуй, изображения, изображение, фото, рисунок, портрет, иллюстрация, картинка
  
 When asked to draw, paint, design, generate, or create an image, picture, photo, or visual artwork, strictly follow these instructions:
 1. **Rich Prompt Expansion & Style Adaptability**:
