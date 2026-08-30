@@ -179,7 +179,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     });
 
     await app.register(staticPlugin, {
-      root: path.join(__dirname, '../../frontend'),
+      root: path.join(process.cwd(), 'frontend'),
       prefix: '/',
     });
 
