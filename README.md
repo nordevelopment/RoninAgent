@@ -17,6 +17,7 @@ Open PAIAgent is a high-speed, zero-bloat open-source personal AI agent built fo
 
 ## ⚡Features
 *   **💬 Dual Interfaces**: A beautiful cyberpunk-themed Web UI + Remote chat access via a Telegram bot.
+*   **🤖 Multi-Agent Hub**: Dedicated in-app **Agents Hub** manager to create, edit, switch, and delete custom AI agents. Easily tweak persona files (`Agent.md`, `Identity.md`, `User.md`, `Memory.md`) and tailor prompt instructions for each specialized agent.
 *   **🧠 Modular System Prompt**: The agent's personality and instructions are compiled dynamically from simple Markdown files (`Agent.md`, `Identity.md`, `User.md`, `Memory.md`).
 *   **⚡ Dynamic Agent Skills**: Save LLM context tokens by loading specialized prompt instructions conditionally. Skills live as modular Markdown files in `agents/<agentId>/skills/*.md`. When a query matches header keywords (e.g., `Keywords: amazon, wildberries, temu, code`), instructions are dynamically injected into the system prompt. Comes with pre-built skills for:
     *   **🛒 E-commerce & Local Search**: Specialized URL structures, price sorting, and parsing rules for **Amazon**, **Wildberries**, **Ozon**, **Temu**, and **List.am**.
@@ -85,24 +86,29 @@ npm install
 ```
 *(Alternatively, you can download and extract the ZIP archive directly from GitHub).*
 
-### 2. Run the Application
+### 2. Configuration & Launch
+Configuration can be set up beforehand via a `.env` file or configured interactively via the **Web Setup Wizard** on first launch.
+
 ```bash
-# Start - Build & start the app, Run Server
+# Start - Build & launch the server
 npm start
+```
 
+Once started, open **`http://127.0.0.1:3000`** in your browser. If no configuration is detected, you will be automatically redirected to the setup wizard. You can also adjust settings later via the Settings page in the UI.
 
-# For Developers
+### 🛠️ For Developers
+```bash
 # Run the development server (with hot reloading)
 npm run dev
 
 # Recreate/reset the SQLite database schema
 npm run db:reset
 
-# run only build command
-npm run build 
+# Run build only
+npm run build
 ```
-The server will start at `http://127.0.0.1:3000`. Open it in your browser. 
-First run or no config files found, you will be automatically redirected to the settings wizard page.
+
+
 
 ## 🔒 Security
 
