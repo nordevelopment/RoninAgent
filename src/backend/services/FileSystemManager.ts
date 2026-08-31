@@ -8,6 +8,7 @@ import fs from 'fs/promises';
 import fsSync from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
 import { config } from '../config.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -25,6 +26,14 @@ function ensureDir(dirPath: string): void {
       throw error;
     }
   }
+}
+
+export interface UploadedFileInfo {
+  name: string;
+  savedName: string;
+  path: string;
+  size: number;
+  mimetype?: string;
 }
 
 export interface FileInfo {
@@ -263,5 +272,71 @@ export class FileSystemManager {
     await fs.mkdir(destDir, { recursive: true });
 
     await fs.rename(validatedSource, validatedDest);
+  }
+
+  /**
+   * Save an uploaded file into session workspace folder safely
+   */
+  async saveUploadedFile(
+    sessionId: string,
+    originalFilename?: string,
+    buffer?: Buffer,
+    mimetype?: string
+  ): Promise<UploadedFileInfo> {
+    const sessionFolderName = sessionId.startsWith('session_') || sessionId.startsWith('telegram_')
+      ? sessionId
+      : `session_${sessionId}`;
+
+    const projectRoot = path.join(__dirname, '../../../');
+    const sessionDir = path.join(projectRoot, 'workspace', sessionFolderName);
+    await fs.mkdir(sessionDir, { recursive: true });
+
+    const rawName = originalFilename || 'uploaded_document';
+    const cleanName = path.basename(rawName).replace(/[^\w\d_.\-\s\u0400-\u04FF]/g, '_');
+    const targetFilePath = path.join(sessionDir, cleanName);
+
+    if (buffer) {
+      await fs.writeFile(targetFilePath, buffer);
+    }
+
+    const stats = await fs.stat(targetFilePath);
+    const relativeWorkspacePath = `${sessionFolderName}/${cleanName}`;
+
+    return {
+      name: rawName,
+      savedName: cleanName,
+      path: relativeWorkspacePath,
+      size: stats.size,
+      mimetype
+    };
+  }
+
+  /**
+   * Open workspace root directory in operating system's native file explorer
+   */
+  async openWorkspaceInExplorer(): Promise<string> {
+    const projectRoot = path.join(__dirname, '../../../');
+    const workspacePath = path.resolve(projectRoot, 'workspace');
+    await fs.mkdir(workspacePath, { recursive: true });
+
+    const platform = process.platform;
+    let command = '';
+    if (platform === 'win32') {
+      command = `start "" "${workspacePath}"`;
+    } else if (platform === 'darwin') {
+      command = `open "${workspacePath}"`;
+    } else {
+      command = `xdg-open "${workspacePath}"`;
+    }
+
+    return new Promise((resolve) => {
+      exec(command, (err) => {
+        if (err && platform === 'win32') {
+          exec(`explorer "${workspacePath}"`, () => resolve(workspacePath));
+        } else {
+          resolve(workspacePath);
+        }
+      });
+    });
   }
 }

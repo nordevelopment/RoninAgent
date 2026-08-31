@@ -199,7 +199,7 @@ export class ChatManager {
         });
 
         // Trigger auto-rename if session has no title and it's a standard user session
-        if (session && !session.title && sessionId !== 'task_session' && !sessionId.startsWith('telegram_')) {
+        if (session && !session.title && !sessionId.startsWith('task_') && sessionId !== 'task_session' && !sessionId.startsWith('telegram_')) {
           (async () => {
             try {
               const fullHistory = await this.historyManager.getHistory(sessionId);

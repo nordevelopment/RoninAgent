@@ -7,27 +7,13 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import crypto from 'crypto';
 import { ChatManager } from './ai/ChatManager.js';
 import { AgentService } from './ai/AgentService.js';
-import { TelegramBot } from './services/TelegramBot.js';
 import { config } from './config.js';
-import { updateEnvFile } from './utils/envHelper.js';
-import { DatabaseClient } from './database/DatabaseClient.js';
-import { TaskModel } from './models/task.js';
-import { getNextRunTime } from './utils/schedule.js';
-import fs from 'fs';
-import path from 'path';
-import { getAIProvidersList } from './config/ai_providers.js';
+import { TaskService } from './services/TaskService.js';
+import { SettingsService, UpdateSettingsDto } from './services/SettingsService.js';
+import { FileSystemManager, UploadedFileInfo } from './services/FileSystemManager.js';
 import { openRouterService } from './services/OpenRouterService.js';
-import { exec } from 'child_process';
 
-
-
-
-export interface UploadedFileInfo {
-  name: string;
-  path: string;
-  size: number;
-  type?: string;
-}
+export type { UploadedFileInfo };
 
 /**
  * Types for chat request body
@@ -48,99 +34,18 @@ interface ClearHistoryRequestBody {
  * @param app - Fastify instance
  * @param chatManager - chat manager
  * @param agentService - agent service
- * @param telegramBot - telegram bot
- * @param db - database client
+ * @param taskService - task service
+ * @param settingsService - settings service
+ * @param fsManager - file system manager
  */
-export async function registerRoutes(app: FastifyInstance, chatManager: ChatManager, agentService: AgentService, telegramBot: TelegramBot, db: DatabaseClient): Promise<void> {
-
-  const taskModel = new TaskModel(db);
-
-  // In-flight guard to prevent concurrent task execution overlaps
-  let isExecutingTasks = false;
-
-  // Helper to execute tasks sequentially in background
-  async function executeTasks(tasksToRun: any[]) {
-    const taskSessionId = 'task_session';
-
-    // Ensure session exists
-    const session = await chatManager.getSession(taskSessionId);
-    if (!session) {
-      await chatManager.createSession(taskSessionId, 'main_agent');
-    }
-
-    let telegramOwnerId: number | null = null;
-    if (config.ALLOWED_TELEGRAM_USER_IDS) {
-      const firstId = config.ALLOWED_TELEGRAM_USER_IDS.split(',')[0].trim();
-      if (firstId) {
-        telegramOwnerId = parseInt(firstId, 10);
-      }
-    }
-
-    for (const task of tasksToRun) {
-      try {
-        //app.log.info(`[Task Runner] Starting task #${task.id}: "${task.title}"`);
-        // Tasks are already claimed (status='running' in DB) by claimReadyTasks, no need to update here
-
-        if (telegramOwnerId && telegramBot) {
-          await telegramBot.sendMessage(telegramOwnerId, `⏳ **[TASK #${task.id}] STARTED**\nInstruction: "${task.title}"`).catch(err => {
-            console.error('[Telegram] Notification error:', err);
-          });
-        }
-
-        // Send message to agent
-        const response = await chatManager.sendMessage(task.title, taskSessionId);
-
-        // Check if task is recurring (has interval or cron schedule)
-        const nextRunIso = getNextRunTime(task);
-
-        if (nextRunIso) {
-          // Recurring task: reschedule for next run and set back to 'ready'
-          await taskModel.update(task.id, {
-            status: 'ready',
-            run_at: nextRunIso,
-            result: response.content
-          });
-        } else {
-          // One-shot task: set to done
-          await taskModel.update(task.id, {
-            status: 'done',
-            result: response.content
-          });
-        }
-
-        //app.log.info(`[Task Runner] Completed task #${task.id}`);
-        if (telegramOwnerId && telegramBot) {
-          const statusHeader = nextRunIso ? `🔁 **[TASK #${task.id}] RECURRED** (Next: ${nextRunIso})` : `✅ **[TASK #${task.id}] COMPLETED**`;
-          await telegramBot.sendMessage(telegramOwnerId, `${statusHeader}\nInstruction: "${task.title}"\n\nResult:\n${response.content}`).catch(err => {
-            console.error('[Telegram] Notification error:', err);
-          });
-        }
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`Failed to execute task ${task.id}:`, error);
-
-        const nextRunIso = getNextRunTime(task);
-        if (nextRunIso) {
-          await taskModel.update(task.id, {
-            status: 'ready',
-            run_at: nextRunIso,
-            result: `Error: ${errorMsg}`
-          });
-        } else {
-          await taskModel.update(task.id, {
-            status: 'failed',
-            result: errorMsg
-          });
-        }
-
-        if (telegramOwnerId && telegramBot) {
-          await telegramBot.sendMessage(telegramOwnerId, `❌ **[TASK #${task.id}] FAILED**\nInstruction: "${task.title}"\n\nError: ${errorMsg}`).catch(err => {
-            console.error('[Telegram] Notification error:', err);
-          });
-        }
-      }
-    }
-  }
+export async function registerRoutes(
+  app: FastifyInstance,
+  chatManager: ChatManager,
+  agentService: AgentService,
+  taskService: TaskService,
+  settingsService: SettingsService,
+  fsManager: FileSystemManager
+): Promise<void> {
 
   // Main chat template route
   app.get('/', async (_request, reply) => {
@@ -159,7 +64,7 @@ export async function registerRoutes(app: FastifyInstance, chatManager: ChatMana
 
   // Get all tasks
   app.get('/api/tasks', async (_request, reply) => {
-    const tasks = await taskModel.findAll();
+    const tasks = await taskService.getAllTasks();
     return reply.send({ tasks });
   });
 
@@ -171,7 +76,7 @@ export async function registerRoutes(app: FastifyInstance, chatManager: ChatMana
     }
 
     try {
-      const taskId = await taskModel.create({
+      const taskId = await taskService.createTask({
         title,
         status,
         run_at: run_at || undefined,
@@ -196,12 +101,12 @@ export async function registerRoutes(app: FastifyInstance, chatManager: ChatMana
     const { title, status, result, run_at, is_auto, repeat_interval, cron_expression } = request.body;
 
     try {
-      const existing = await taskModel.findById(id);
+      const existing = await taskService.getTaskById(id);
       if (!existing) {
         return reply.status(404).send({ success: false, message: 'Task not found' });
       }
 
-      await taskModel.update(id, {
+      await taskService.updateTask(id, {
         title,
         status,
         result,
@@ -225,12 +130,12 @@ export async function registerRoutes(app: FastifyInstance, chatManager: ChatMana
     }
 
     try {
-      const existing = await taskModel.findById(id);
+      const existing = await taskService.getTaskById(id);
       if (!existing) {
         return reply.status(404).send({ success: false, message: 'Task not found' });
       }
 
-      await taskModel.delete(id);
+      await taskService.deleteTask(id);
       return reply.send({ success: true, message: 'Task deleted successfully' });
     } catch (error) {
       request.log.error({ err: error }, 'Failed to delete task');
@@ -240,26 +145,8 @@ export async function registerRoutes(app: FastifyInstance, chatManager: ChatMana
 
   // Run ready tasks in background
   app.post('/api/tasks/run', async (_request, reply) => {
-    if (isExecutingTasks) {
-      return reply.send({ success: true, message: 'Task execution is already in progress' });
-    }
-
-    const nowIso = new Date().toISOString();
-    const readyTasks = await taskModel.claimReadyTasks(nowIso);
-
-    if (readyTasks.length === 0) {
-      return reply.send({ success: true, message: 'No tasks ready to run' });
-    }
-
-    // Run them in background with in-flight guard
-    isExecutingTasks = true;
-    executeTasks(readyTasks).catch(err => {
-      console.error('Error in background tasks runner:', err);
-    }).finally(() => {
-      isExecutingTasks = false;
-    });
-
-    return reply.send({ success: true, message: `Started executing ${readyTasks.length} tasks in the background.` });
+    const result = await taskService.triggerReadyTasks();
+    return reply.send(result);
   });
 
   // Render agent editor page
@@ -352,35 +239,17 @@ export async function registerRoutes(app: FastifyInstance, chatManager: ChatMana
       }
 
       const requestedSessionId = request.sessionId || (data.fields?.sessionId as any)?.value || 'session_global';
-      const sessionFolderName = requestedSessionId.startsWith('session_') || requestedSessionId.startsWith('telegram_')
-        ? requestedSessionId
-        : `session_${requestedSessionId}`;
-
-      const sessionDir = path.join(process.cwd(), 'workspace', sessionFolderName);
-      if (!fs.existsSync(sessionDir)) {
-        fs.mkdirSync(sessionDir, { recursive: true });
-      }
-
-      // Preserve clean original filename
-      const originalName = data.filename || 'uploaded_document';
-      const cleanName = path.basename(originalName).replace(/[^\w\d_.\-\s\u0400-\u04FF]/g, '_');
-      const targetFilePath = path.join(sessionDir, cleanName);
-
       const buffer = await data.toBuffer();
-      fs.writeFileSync(targetFilePath, buffer);
-
-      const relativeWorkspacePath = `${sessionFolderName}/${cleanName}`;
-      const stats = fs.statSync(targetFilePath);
+      const fileInfo = await fsManager.saveUploadedFile(
+        requestedSessionId,
+        data.filename,
+        buffer,
+        data.mimetype
+      );
 
       return reply.send({
         success: true,
-        file: {
-          name: originalName,
-          savedName: cleanName,
-          path: relativeWorkspacePath,
-          size: stats.size,
-          mimetype: data.mimetype
-        }
+        file: fileInfo
       });
     } catch (err: any) {
       request.log.error({ err }, 'File upload failed');
@@ -518,24 +387,7 @@ export async function registerRoutes(app: FastifyInstance, chatManager: ChatMana
 
   // Get system settings
   app.get('/api/settings', async (_request, reply) => {
-    return reply.send({
-      providers: getAIProvidersList(),
-      hasAiApiKey: !!config.AI_API_KEY,
-      aiApiUrl: config.AI_API_URL || 'https://openrouter.ai/api/v1/chat/completions',
-      aiDefaultModel: config.AI_DEFAULT_MODEL || 'qwen/qwen3.5-flash-02-23',
-      hasTelegramBotToken: !!config.TELEGRAM_BOT_TOKEN,
-      allowedTelegramUserIds: config.ALLOWED_TELEGRAM_USER_IDS || '',
-      appUser: config.APP_USER || 'admin',
-      hasAppPassword: !!config.APP_PASSWORD,
-      appPasswordMasked: config.APP_PASSWORD ? '******' : '',
-      hasTogetherApiKey: !!config.images.together.key,
-      togetherImageModel: config.images.together.model || 'black-forest-labs/FLUX.2-dev',
-      hasXaiApiKey: !!config.images.xai.key,
-      aiApiKeyMasked: config.AI_API_KEY ? '******' : '',
-      telegramBotTokenMasked: config.TELEGRAM_BOT_TOKEN ? '******' : '',
-      togetherApiKeyMasked: config.images.together.key ? '******' : '',
-      xaiApiKeyMasked: config.images.xai.key ? '******' : ''
-    });
+    return reply.send(settingsService.getPublicSettings());
   });
 
   // Get OpenRouter live models with pricing
@@ -549,180 +401,20 @@ export async function registerRoutes(app: FastifyInstance, chatManager: ChatMana
   });
 
   // Save system settings
-  app.post('/api/settings', async (request: FastifyRequest<{ Body: { aiApiKey?: string, aiApiUrl?: string, aiDefaultModel?: string, telegramBotToken?: string, allowedTelegramUserIds?: string, appUser?: string, appPassword?: string, togetherApiKey?: string, togetherImageModel?: string, xaiApiKey?: string } }>, reply: FastifyReply) => {
-    const { aiApiKey, aiApiUrl, aiDefaultModel, telegramBotToken, allowedTelegramUserIds, appUser, appPassword, togetherApiKey, togetherImageModel, xaiApiKey } = request.body;
-
-    const envPath = path.join(process.cwd(), '.env');
-    const configJsonPath = path.join(process.cwd(), 'config.json');
-    const isNewKey = (key?: string) => key !== undefined && key !== '******';
-
-    if (fs.existsSync(envPath)) {
-      // .env mode
-      const envUpdates: Record<string, string> = {};
-
-      if (isNewKey(aiApiKey)) {
-        const clean = aiApiKey!.trim();
-        envUpdates.AI_API_KEY = clean;
-        config.AI_API_KEY = clean;
-      }
-      if (aiApiUrl !== undefined) {
-        const clean = aiApiUrl.trim();
-        envUpdates.AI_API_URL = clean;
-        config.AI_API_URL = clean;
-      }
-      if (aiDefaultModel !== undefined) {
-        const clean = aiDefaultModel.trim();
-        envUpdates.AI_DEFAULT_MODEL = clean;
-        config.AI_DEFAULT_MODEL = clean;
-      }
-      if (isNewKey(telegramBotToken)) {
-        const clean = telegramBotToken!.trim();
-        envUpdates.TELEGRAM_BOT_TOKEN = clean;
-        config.TELEGRAM_BOT_TOKEN = clean;
-        telegramBot.updateToken(clean).catch(err => {
-          request.log.error({ err }, 'Failed to reload Telegram bot dynamically');
-        });
-      }
-      if (allowedTelegramUserIds !== undefined) {
-        const clean = allowedTelegramUserIds.trim();
-        envUpdates.ALLOWED_TELEGRAM_USER_IDS = clean;
-        config.ALLOWED_TELEGRAM_USER_IDS = clean;
-      }
-      if (appUser !== undefined) {
-        const clean = appUser.trim();
-        envUpdates.APP_USER = clean;
-        config.APP_USER = clean;
-      }
-      if (isNewKey(appPassword)) {
-        const clean = appPassword!.trim();
-        envUpdates.APP_PASSWORD = clean;
-        config.APP_PASSWORD = clean;
-      }
-      if (isNewKey(togetherApiKey)) {
-        const clean = togetherApiKey!.trim();
-        envUpdates.TOGETHER_API_KEY = clean;
-        config.images.together.key = clean;
-      }
-      if (togetherImageModel !== undefined) {
-        const clean = togetherImageModel.trim();
-        envUpdates.TOGETHER_IMAGE_MODEL = clean;
-        config.images.together.model = clean;
-      }
-      if (isNewKey(xaiApiKey)) {
-        const clean = xaiApiKey!.trim();
-        envUpdates.XAI_API_KEY = clean;
-        config.images.xai.key = clean;
-      }
-
-      updateEnvFile(envPath, envUpdates);
-
-      // Clean up config.json if it exists to prevent conflict/duplication
-      if (fs.existsSync(configJsonPath)) {
-        try {
-          fs.unlinkSync(configJsonPath);
-        } catch (e) {
-          // ignore
-        }
-      }
-    } else {
-      // config.json mode
-      let configData: Record<string, string> = {};
-      if (fs.existsSync(configJsonPath)) {
-        try {
-          const raw = fs.readFileSync(configJsonPath, 'utf-8');
-          if (raw.trim()) {
-            configData = JSON.parse(raw);
-          }
-        } catch (err) {
-          // ignore
-        }
-      }
-
-      if (isNewKey(aiApiKey)) {
-        configData.ai_api_key = aiApiKey!.trim();
-        config.AI_API_KEY = configData.ai_api_key;
-      }
-      if (aiApiUrl !== undefined) {
-        const cleanUrl = aiApiUrl.trim();
-        configData.ai_api_url = cleanUrl;
-        config.AI_API_URL = cleanUrl;
-      }
-      if (aiDefaultModel !== undefined) {
-        const cleanModel = aiDefaultModel.trim();
-        configData.ai_default_model = cleanModel;
-        config.AI_DEFAULT_MODEL = cleanModel;
-      }
-      if (isNewKey(telegramBotToken)) {
-        const cleanToken = telegramBotToken!.trim();
-        configData.telegram_bot_token = cleanToken;
-        config.TELEGRAM_BOT_TOKEN = cleanToken;
-        telegramBot.updateToken(cleanToken).catch(err => {
-          request.log.error({ err }, 'Failed to reload Telegram bot dynamically');
-        });
-      }
-      if (allowedTelegramUserIds !== undefined) {
-        const cleanIds = allowedTelegramUserIds.trim();
-        configData.allowed_telegram_user_ids = cleanIds;
-        config.ALLOWED_TELEGRAM_USER_IDS = cleanIds;
-      }
-      if (appUser !== undefined) {
-        const clean = appUser.trim();
-        configData.app_user = clean;
-        config.APP_USER = clean;
-      }
-      if (isNewKey(appPassword)) {
-        const clean = appPassword!.trim();
-        configData.app_password = clean;
-        config.APP_PASSWORD = clean;
-      }
-      if (isNewKey(togetherApiKey)) {
-        configData.together_api_key = togetherApiKey!.trim();
-        config.images.together.key = configData.together_api_key;
-      }
-      if (togetherImageModel !== undefined) {
-        const clean = togetherImageModel.trim();
-        configData.together_image_model = clean;
-        config.images.together.model = clean;
-      }
-      if (isNewKey(xaiApiKey)) {
-        configData.xai_api_key = xaiApiKey!.trim();
-        config.images.xai.key = configData.xai_api_key;
-      }
-
-      fs.writeFileSync(configJsonPath, JSON.stringify(configData, null, 2), 'utf-8');
+  app.post('/api/settings', async (request: FastifyRequest<{ Body: UpdateSettingsDto }>, reply: FastifyReply) => {
+    try {
+      await settingsService.saveSettings(request.body);
+      return reply.send({ success: true, message: 'Settings saved successfully' });
+    } catch (error) {
+      request.log.error({ err: error }, 'Failed to save system settings');
+      return reply.status(500).send({ success: false, message: error instanceof Error ? error.message : 'Failed to save settings' });
     }
-
-    return reply.send({ success: true, message: 'Settings saved successfully' });
   });
 
   // Open workspace directory in OS File Explorer / Finder
   const openWorkspaceHandler = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const workspacePath = path.resolve(process.cwd(), 'workspace');
-      if (!fs.existsSync(workspacePath)) {
-        fs.mkdirSync(workspacePath, { recursive: true });
-      }
-
-      const platform = process.platform;
-
-      let command = '';
-      if (platform === 'win32') {
-        command = `start "" "${workspacePath}"`;
-      } else if (platform === 'darwin') {
-        command = `open "${workspacePath}"`;
-      } else {
-        command = `xdg-open "${workspacePath}"`;
-      }
-
-      exec(command, (err) => {
-        if (err) {
-          request.log.warn({ err }, 'Primary open command failed, trying fallback');
-          if (platform === 'win32') {
-            exec(`explorer "${workspacePath}"`);
-          }
-        }
-      });
-
+      const workspacePath = await fsManager.openWorkspaceInExplorer();
       return reply.send({ success: true, path: workspacePath });
     } catch (err: any) {
       request.log.error({ err }, 'Failed to open workspace directory');
@@ -732,29 +424,5 @@ export async function registerRoutes(app: FastifyInstance, chatManager: ChatMana
 
   app.post('/api/workspace/open', openWorkspaceHandler);
   app.get('/api/workspace/open', openWorkspaceHandler);
-
-  // Start automatic task scheduler (scans for ready auto-tasks every 60 seconds)
-  const taskInterval = setInterval(async () => {
-    if (isExecutingTasks) return; // Skip if already executing
-    try {
-      const nowIso = new Date().toISOString();
-      const readyAutoTasks = await taskModel.claimReadyTasks(nowIso, true);
-      if (readyAutoTasks.length > 0) {
-        //app.log.info(`[Scheduler] Found ${readyAutoTasks.length} auto-run tasks. Executing...`);
-        isExecutingTasks = true;
-        executeTasks(readyAutoTasks).catch(err => {
-          console.error('[Scheduler] Error running automatic tasks:', err);
-        }).finally(() => {
-          isExecutingTasks = false;
-        });
-      }
-    } catch (err) {
-      console.error('[Scheduler] Error in automatic task runner:', err);
-    }
-  }, 60000);
-
-  app.addHook('onClose', async () => {
-    clearInterval(taskInterval);
-  });
 
 }

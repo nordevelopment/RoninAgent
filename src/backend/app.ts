@@ -21,6 +21,9 @@ import { ChatManager } from './ai/ChatManager.js';
 import { AgentService } from './ai/AgentService.js';
 
 import { TelegramBot } from './services/TelegramBot.js';
+import { TaskService } from './services/TaskService.js';
+import { SettingsService } from './services/SettingsService.js';
+import { FileSystemManager } from './services/FileSystemManager.js';
 
 // Augment Fastify types to support sessionId
 declare module 'fastify' {
@@ -120,6 +123,16 @@ export async function buildApp(): Promise<FastifyInstance> {
       app.log.error({ err }, 'Failed to start Telegram bot');
     });
 
+    // --- Task Service & Scheduler initialization ---
+    const taskService = new TaskService(db, chatManager, telegramBot);
+    taskService.startScheduler();
+
+    // --- Settings Service initialization ---
+    const settingsService = new SettingsService(telegramBot);
+
+    // --- FileSystem Manager initialization ---
+    const fsManager = new FileSystemManager();
+
     // --- SESSION AUTO-MANAGEMENT HOOK ---
     app.addHook('onRequest', async (request, reply) => {
       // Игнорируем статику и системные пути
@@ -156,6 +169,9 @@ export async function buildApp(): Promise<FastifyInstance> {
 
     // Register hook for graceful shutdown
     app.addHook('onClose', async () => {
+      app.log.info('Stopping Task scheduler...');
+      taskService.stopScheduler();
+
       app.log.info('Stopping Telegram bot...');
       await telegramBot.stop();
 
@@ -187,7 +203,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     });
 
     // Register routes
-    await registerRoutes(app, chatManager, agentService, telegramBot, db);
+    await registerRoutes(app, chatManager, agentService, taskService, settingsService, fsManager);
 
     return app;
 

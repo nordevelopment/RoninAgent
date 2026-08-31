@@ -127,6 +127,7 @@ class TaskManager {
                 <td>${resultHtml}</td>
                 <td>
                     <div class="actions-cell">
+                        <button class="cyber-btn cyber-btn--cyan btn-mini" title="Open task chat session" onclick="window.taskManager.openTaskChat(${task.id})">CHAT 💬</button>
                         <button class="cyber-btn btn-mini" onclick="window.taskManager.openEditModal(${task.id})">EDIT</button>
                         <button class="cyber-btn cyber-btn--magenta btn-mini" onclick="window.taskManager.deleteTask(${task.id})">DELETE</button>
                     </div>
@@ -212,6 +213,20 @@ class TaskManager {
 
     closeResultModal() {
         this.resultModal.style.display = 'none';
+    }
+
+    async openTaskChat(id) {
+        const sessionId = `task_${id}`;
+        try {
+            await fetch('/api/sessions/switch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId })
+            });
+            window.location.href = '/';
+        } catch (e) {
+            window.location.href = '/';
+        }
     }
 
     async saveTask() {

@@ -1,6 +1,6 @@
 {
   "name": "open-personal-aiagent",
-  "version": "2.5",
+  "version": "2.6.1",
   "description": "Open Personal AI Agent",
   "author": "Norayr Petrosyan",
   "license": "MIT",
@@ -31,8 +31,6 @@
     "build": "tsc",
     "start": "npm run build && node dist/backend/server.js",
     "db:reset": "tsx src/backend/database/db-reset.ts",
-    "test:db": "tsx tests_manual/database.ts",
-    "test:fs": "tsx tests_manual/filesystem.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
