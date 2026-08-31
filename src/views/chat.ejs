@@ -17,172 +17,117 @@
 
     <div class="container">
         <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="logo-panel">
-                <div class="logo cyber-nav__brand" data-text="Open PAIAgent">
-                    Open PAIAgent
-                </div>
-                <div class="cyber-status">
-                    <div class="cyber-status__dot cyber-icon--pulse"></div>
-                </div>
-            </div>
+        <%- include('sidebar.ejs') %>
 
-            <div class="sidebar-panel">
-                <div class="sessions-title cyber-text-glow">THEME</div>
-                <select class="cyber-select cyber-theme-select">
-                    <option value="dark">🌙 Cyber Dark</option>
-                    <option value="light">☀️ Modern Light</option>
-                </select>
-            </div>
-
-            <button id="btnNewChat" class="cyber-btn">
-                NEW CHAT
-            </button>
-
-
-            <div class="sidebar-panel">
-                <div class="sessions-title cyber-text-glow">SESSIONS</div>
-                <div class="sessions-list" id="sessionsList">
-                    <!-- Sessions will be loaded here -->
-                </div>
-            </div>
-
-            <div class="sidebar-panel" style="display: flex; flex-direction: column; gap: 10px;">
-                <button id="btnOpenAgents" class="cyber-btn cyber-btn--cyan w-100"
-                    style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <span>🤖</span> AGENTS HUB
-                </button>
-                <button id="btnOpenWorkspace" class="cyber-btn cyber-btn--cyan w-100" title="OPEN WORKSPACE FOLDER"
-                    style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <span>📁</span> WORKSPACE
-                </button>
-            </div>
-
-            <div class="sidebar-footer">
-                <a href="/settings" id="btnOpenSettings" class="cyber-btn --cyan" style="width: 100%;">
-                    ⚙️ SETTINGS
-                </a>
-
-                <button id="btnClearChat" class="cyber-btn cyber-btn--magenta">
-                    CLEAR CHAT
-                </button>
-
-                <button id="btnClearMemory" class="cyber-btn cyber-btn--magenta" style="margin-top: 10px; width: 100%;">
-                    PURGE MEMORY
-                </button>
-                <!-- Robot Pet Widget -->
-                <div class="sidebar-panel"
-                    style="display: flex; justify-content: center; align-items: center; padding: 10px 0; margin-bottom: 5px;">
-                    <%- include('robotpet.ejs') %>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- Chat Area -->
-        <div class="chat-area" id="chatViewContainer">
-            <div class="chat-header cyber-tile--bottom">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div class="system-status" id="system-status">SYSTEM INITIALIZING...</div>
-                </div>
-
-                <a href="/tasks" id="btnOpenTasks" class="cyber-btn cyber-btn--green">
-                    📋 TASK MANAGER
-                </a>
-            </div>
-
-            <!-- Setup Warning Alert -->
-            <div id="setupWarningAlert" class="cyber-warning-alert">
-                ⚠️ PREVIEW MODE: AI API Key is not configured. Please open <a href="/settings"
-                    id="setupWarningLink">Settings</a> to enter your API key
-                for LLM chat completions.
-            </div>
-
-            <div class="chat-messages" id="chatMessages">
-                <!-- Messages will load here -->
-            </div>
-
-            <div class="typing-indicator" id="typingIndicator">
-                <div class="typing-dots">
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                </div>
-                <span class="typing-text">AI IS THINKING...</span>
-            </div>
-
-            <!-- Drop Zone Overlay for Drag & Drop -->
-            <div id="dropZoneOverlay" class="drop-zone-overlay" style="display: none;">
-                <div class="drop-zone-content">
-                    <div class="drop-zone-icon">📥</div>
-                    <div class="drop-zone-title cyber-text-glow">DROP FILES HERE TO UPLOAD</div>
-                    <div class="drop-zone-desc">// Supports .txt, .pdf, .xlsx, .docx, .csv, .json, images</div>
-                </div>
-            </div>
-
-            <div class="input-area cyber-tile--top">
-                <div class="input-container">
-                    <div id="attachmentsPreviewContainer" class="attachments-preview-container">
-                        <!-- Dynamic file attachment chips -->
+            <!-- Chat Area -->
+            <div class="chat-area" id="chatViewContainer">
+                <div class="chat-header cyber-tile--bottom">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="system-status" id="system-status">SYSTEM INITIALIZING...</div>
                     </div>
-                    <div id="imagePreviewContainer" class="image-preview-container">
-                        <img id="imagePreview" src="" alt="Selected Preview" />
-                        <button id="btnRemoveImage" class="btn-remove" type="button" title="REMOVE IMAGE">×</button>
+
+                    <a href="/tasks" id="btnOpenTasks" class="cyber-btn cyber-btn--green">
+                        📋 TASK MANAGER
+                    </a>
+                </div>
+
+                <!-- Setup Warning Alert -->
+                <div id="setupWarningAlert" class="cyber-warning-alert">
+                    ⚠️ PREVIEW MODE: AI API Key is not configured. Please open <a href="/settings"
+                        id="setupWarningLink">Settings</a> to enter your API key
+                    for LLM chat completions.
+                </div>
+
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Messages will load here -->
+                </div>
+
+                <div class="typing-indicator" id="typingIndicator">
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
                     </div>
-                    <textarea id="messageInput" class="cyber-textarea"
-                        placeholder="Enter the message or task, or attach files (.txt, .pdf, .xlsx, .docx)"></textarea>
+                    <span class="typing-text">AI IS THINKING...</span>
                 </div>
-                <div class="send-button-container"
-                    style="display: flex; flex-direction: column; gap: 8px; justify-content: flex-end;">
 
-                    <label for="input-doc-file" class="cyber-btn cyber-btn--cyan cyber-btn--sm" title="ATTACH FILES (.TXT, .PDF, .XLSX, .DOCX, IMAGES)"
-                        style="padding: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                        </svg>
-                    </label>
-                    <input type="file" id="input-doc-file" accept=".txt,.md,.json,.csv,.log,.pdf,.xlsx,.xls,.docx,.doc,image/*" multiple style="display:none;">
-                    <input type="file" id="input-image-file" accept="image/*" style="display:none;">
+                <!-- Drop Zone Overlay for Drag & Drop -->
+                <div id="dropZoneOverlay" class="drop-zone-overlay" style="display: none;">
+                    <div class="drop-zone-content">
+                        <div class="drop-zone-icon">📥</div>
+                        <div class="drop-zone-title cyber-text-glow">DROP FILES HERE TO UPLOAD</div>
+                        <div class="drop-zone-desc">// Supports .txt, .pdf, .xlsx, .docx, .csv, .json, images</div>
+                    </div>
+                </div>
 
-                    <button id="sendButton" class="cyber-btn cyber-btn--cyan" title="SEND MESSAGE"
-                        style="padding: 8px 12px; display: flex; align-items: center; justify-content: center;">
-                        <svg class="send-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                        </svg>
-                    </button>
+                <div class="input-area cyber-tile--top">
+                    <div class="input-container">
+                        <div id="attachmentsPreviewContainer" class="attachments-preview-container">
+                            <!-- Dynamic file attachment chips -->
+                        </div>
+                        <div id="imagePreviewContainer" class="image-preview-container">
+                            <img id="imagePreview" src="" alt="Selected Preview" />
+                            <button id="btnRemoveImage" class="btn-remove" type="button" title="REMOVE IMAGE">×</button>
+                        </div>
+                        <textarea id="messageInput" class="cyber-textarea"
+                            placeholder="Enter the message or task, or attach files (.txt, .pdf, .xlsx, .docx)"></textarea>
+                    </div>
+                    <div class="send-button-container"
+                        style="display: flex; flex-direction: column; gap: 8px; justify-content: flex-end;">
+
+                        <label for="input-doc-file" class="cyber-btn cyber-btn--cyan cyber-btn--sm"
+                            title="ATTACH FILES (.TXT, .PDF, .XLSX, .DOCX, IMAGES)"
+                            style="padding: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                width="18" height="18">
+                                <path
+                                    d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                            </svg>
+                        </label>
+                        <input type="file" id="input-doc-file"
+                            accept=".txt,.md,.json,.csv,.log,.pdf,.xlsx,.xls,.docx,.doc,image/*" multiple
+                            style="display:none;">
+                        <input type="file" id="input-image-file" accept="image/*" style="display:none;">
+
+                        <button id="sendButton" class="cyber-btn cyber-btn--cyan" title="SEND MESSAGE"
+                            style="padding: 8px 12px; display: flex; align-items: center; justify-content: center;">
+                            <svg class="send-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Agents Management View (Right Panel) -->
-        <div class="chat-area" id="agentsViewContainer" style="display: none;">
-            <div class="chat-header cyber-tile--bottom">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 20px;">🤖</span>
-                    <div class="system-status cyber-text-glow" style="font-size: 16px;">AGENTS HUB</div>
+            <!-- Agents Management View (Right Panel) -->
+            <div class="chat-area" id="agentsViewContainer" style="display: none;">
+                <div class="chat-header cyber-tile--bottom">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 20px;">🤖</span>
+                        <div class="system-status cyber-text-glow" style="font-size: 16px;">AGENTS HUB</div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button id="btnCreateAgentTop" class="cyber-btn cyber-btn--green">
+                            + CREATE AGENT
+                        </button>
+                        <button id="btnBackToChat" class="cyber-btn cyber-btn--cyan">
+                            ← BACK TO CHAT
+                        </button>
+                    </div>
                 </div>
 
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <button id="btnCreateAgentTop" class="cyber-btn cyber-btn--green">
-                        + CREATE AGENT
-                    </button>
-                    <button id="btnBackToChat" class="cyber-btn cyber-btn--cyan">
-                        ← BACK TO CHAT
-                    </button>
+                <div class="agents-view-body" style="flex: 1; overflow-y: auto; padding: 25px;">
+                    <div
+                        style="margin-bottom: 20px; color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 13px;">
+                        // Select an agent to start a new chat session, or edit/delete existing agents.
+                    </div>
+                    <div id="agentsGridContainer" class="agents-grid">
+                        <!-- Agent cards will be rendered dynamically -->
+                    </div>
                 </div>
             </div>
-
-            <div class="agents-view-body" style="flex: 1; overflow-y: auto; padding: 25px;">
-                <div
-                    style="margin-bottom: 20px; color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 13px;">
-                    // Select an agent to start a new chat session, or edit/delete existing agents.
-                </div>
-                <div id="agentsGridContainer" class="agents-grid">
-                    <!-- Agent cards will be rendered dynamically -->
-                </div>
-            </div>
-        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
