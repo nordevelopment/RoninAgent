@@ -9,6 +9,9 @@
 > ⭐ **Star Us on GitHub!**
 > If you find RoninAgent useful or inspiring, please consider giving this repository a star! It helps the project grow and fuels future development. 🚀
 
+> [!NOTE]
+> **Rebranding Notice**: **RoninAgent** was formerly known as **OpenPAIAgent** (Open Personal AI Agent). Same lightning-fast, zero-bloat architecture — now with a stronger sovereign identity.
+
 <a href="https://nordevelopment.github.io/RoninAgent">RoninAgent project page</a>
 
 RoninAgent is a high-speed, zero-bloat open-source personal AI agent built for absolute privacy, local execution, and total autonomy. Designed as an ultra-lightweight alternative to resource-heavy frameworks, it drops complex abstractions like LangChain in favor of pure TypeScript performance, sub-second cold starts, and complete data sovereignty.
