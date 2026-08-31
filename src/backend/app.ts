@@ -1,7 +1,6 @@
 import Fastify, { FastifyInstance, LogController } from 'fastify';
 import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import basicAuth from '@fastify/basic-auth';
 import staticPlugin from '@fastify/static';
@@ -29,9 +28,6 @@ declare module 'fastify' {
     sessionId: string;
   }
 }
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /**
  * Get cookie secret
