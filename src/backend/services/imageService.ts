@@ -14,7 +14,7 @@ import logger from '../utils/logger.js';
 
 interface ImageGenerationResponse {
   relativePath: string; // Relative path from server root (e.g., /workspace/session_xxx/images/image.png)
-  fullPath: string; // Full system path (e.g., E:\AILab\NodeProjects\OpenPAIAgent\workspace\session_xxx\images\image.png)
+  fullPath: string; // Full system path (e.g., E:\AILab\NodeProjects\RoninAgent\workspace\session_xxx\images\image.png)
 }
 
 interface TogetherImageResponse {

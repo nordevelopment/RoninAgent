@@ -1,7 +1,7 @@
 {
-  "name": "open-personal-aiagent",
+  "name": "ronin-agent",
   "version": "2.6.1",
-  "description": "Open Personal AI Agent",
+  "description": "RoninAgent — Lightweight, sovereign, zero-bloat open-source personal AI agent",
   "author": "Norayr Petrosyan",
   "license": "MIT",
   "type": "module",

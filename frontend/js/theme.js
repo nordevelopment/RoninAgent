@@ -1,5 +1,5 @@
 /**
- * PAIAgent Global Theme Management Module
+ * RoninAgent Global Theme Management Module
  * Supports switching between 'dark' and 'light' themes.
  * Persists user preference in localStorage and handles non-FOUC initialization.
  */

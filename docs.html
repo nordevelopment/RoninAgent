@@ -4,31 +4,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAIAgent Documentation - Lightweight Personal AI Assistant</title>
+    <title>RoninAgent Documentation - Sovereign Personal AI Assistant</title>
     <meta name="description"
-        content="PAIAgent Documentation - Comprehensive guide for installation, configuration, and modular prompt structure of the lightweight local Personal AI Assistant.">
+        content="RoninAgent Documentation - Comprehensive guide for installation, configuration, and modular prompt structure of the lightweight local Personal AI Assistant.">
     <meta name="keywords"
-        content="PAIAgent Docs, AI agent installation, local LLM configuration, custom tools, SQLite vector setup">
+        content="RoninAgent Docs, AI agent installation, local LLM configuration, custom tools, SQLite vector setup">
     <meta name="author" content="Norayr Petrosyan">
     <meta name="robots" content="index, follow">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://github.com/nordevelopment/OpenPAIAgent">
-    <meta property="og:title" content="PAIAgent Documentation - Lightweight Personal AI Assistant">
+    <meta property="og:url" content="https://github.com/nordevelopment/RoninAgent">
+    <meta property="og:title" content="RoninAgent Documentation - Sovereign Personal AI Assistant">
     <meta property="og:description"
         content="Comprehensive guide for installation, configuration, and modular prompt structure of the lightweight local Personal AI Assistant.">
     <meta property="og:image"
-        content="https://raw.githubusercontent.com/nordevelopment/OpenPAIAgent/main/frontend/assets/og-image.png">
+        content="https://raw.githubusercontent.com/nordevelopment/RoninAgent/main/frontend/assets/og-image.png">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://github.com/nordevelopment/OpenPAIAgent">
-    <meta property="twitter:title" content="PAIAgent Documentation - Lightweight Personal AI Assistant">
+    <meta property="twitter:url" content="https://github.com/nordevelopment/RoninAgent">
+    <meta property="twitter:title" content="RoninAgent Documentation - Sovereign Personal AI Assistant">
     <meta property="twitter:description"
         content="Comprehensive guide for installation, configuration, and modular prompt structure of the lightweight local Personal AI Assistant.">
     <meta property="twitter:image"
-        content="https://raw.githubusercontent.com/nordevelopment/OpenPAIAgent/main/frontend/assets/og-image.png">
+        content="https://raw.githubusercontent.com/nordevelopment/RoninAgent/main/frontend/assets/og-image.png">
     <!-- Google Fonts for Cyberpunk Aesthetic -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -291,14 +291,14 @@
 
     <!-- Cyberpunk Navbar -->
     <nav class="cyber-nav">
-        <a href="index.html" class="cyber-nav__brand">Open PAIAgent</a>
+        <a href="index.html" class="cyber-nav__brand">⚔️ RoninAgent</a>
         <button class="cyber-nav__burger" id="navBurger" aria-label="Toggle navigation" aria-expanded="false">
             <span></span><span></span><span></span>
         </button>
         <ul class="cyber-nav__links" id="navLinks">
             <li><a href="index.html" class="cyber-nav__link">Home</a></li>
             <li><a href="docs.html" class="cyber-nav__link cyber-nav__link--active">Docs</a></li>
-            <li><a href="https://github.com/nordevelopment/OpenPAIAgent" class="cyber-nav__link"
+            <li><a href="https://github.com/nordevelopment/RoninAgent" class="cyber-nav__link"
                     target="_blank">GitHub</a></li>
         </ul>
         <div style="display: flex; align-items: center; gap: 15px;">
@@ -316,8 +316,8 @@
     <!-- Header Section -->
     <header class="docs-header">
         <div class="container">
-            <h1 class="docs-title">PAIAgent // DOCUMENTATION</h1>
-            <p class="docs-subtitle">Technical blueprint and system integration instructions for Open Personal AI Agent
+            <h1 class="docs-title">RONIN AGENT // DOCUMENTATION</h1>
+            <p class="docs-subtitle">Technical blueprint and system integration instructions for RoninAgent
             </p>
         </div>
     </header>
@@ -344,14 +344,14 @@
                 <section id="introduction" class="docs-section">
                     <h2>1. Introduction</h2>
                     <p>
-                        <strong>Open Personal AI Agent (PAIAgent)</strong> is a state-of-the-art, hyper-lightweight
+                        <strong>RoninAgent</strong> is a state-of-the-art, hyper-lightweight
                         local agent framework. Built with Node.js, Fastify, and TypeScript, it is designed for
                         developers and power users who want a customized local AI assistant without the resource
                         overhead of heavyweight enterprise solutions.
                     </p>
                     <p>
                         Unlike solutions that require complex virtualization or multi-gigabyte container clusters,
-                        Open PAIAgent boots in less than a second and operates within a tiny memory footprint of 50-100
+                        RoninAgent boots in less than a second and operates within a tiny memory footprint of 50-100
                         MB
                         RAM.
                     </p>
@@ -393,8 +393,8 @@
                         </div>
                         <pre>
                             <code>
-                                git clone https://github.com/nordevelopment/OpenPAIAgent.git
-cd OpenPAIAgent
+                                git clone https://github.com/nordevelopment/RoninAgent.git
+cd RoninAgent
 npm install
                             </code>
                         </pre>
@@ -439,7 +439,7 @@ npm install
                 <section id="configuration" class="docs-section">
                     <h2>3. Configuration & APIs</h2>
                     <p>
-                        PAIAgent features a built-in <strong>Setup Wizard</strong>. When you launch the server for the
+                        RoninAgent features a built-in <strong>Setup Wizard</strong>. When you launch the server for the
                         first time, simply navigate to <strong class="highlight-text">http://127.0.0.1:3000</strong>.
                         You will be automatically redirected to a web settings page.
                     </p>
@@ -491,7 +491,7 @@ npm install
                 <section id="modular-prompts" class="docs-section">
                     <h2>4. Modular Prompts</h2>
                     <p>
-                        PAIAgent compiles the system prompt dynamically on application boot. Instead of maintaining a
+                        RoninAgent compiles the system prompt dynamically on application boot. Instead of maintaining a
                         single massive string, system instructions are divided into clean, readable Markdown documents
                         located under your prompt workspace directory.
                     </p>
@@ -580,7 +580,7 @@ npm install
                 <section id="memory-db" class="docs-section">
                     <h2>6. Semantic Memory & Database</h2>
                     <p>
-                        PAIAgent features a hybrid memory engine powered by **better-sqlite3** and the **sqlite-vec**
+                        RoninAgent features a hybrid memory engine powered by **better-sqlite3** and the **sqlite-vec**
                         extension.
                     </p>
                     <p>
@@ -613,7 +613,7 @@ npm install
     <footer
         style="background: var(--cyber-void-800); border-top: 1px solid var(--color-border-default); padding: var(--space-lg) 0; text-align: center; font-family: var(--font-mono); font-size: var(--text-sm);">
         <div class="container">
-            <p><strong class="highlight-text">Open Personal AI Agent (PAIAgent)</strong></p>
+            <p><strong class="highlight-text">RoninAgent</strong></p>
             <p>Author: Norayr Petrosyan</p>
             <p>Licensed under MIT // © 2024 - 2026 Nordevelopment</p>
         </div>

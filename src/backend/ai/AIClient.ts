@@ -336,7 +336,7 @@ export class AIClient {
           headers: {
             'Authorization': `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json',
-            'X-Title': 'PAIAgent'
+            'X-Title': 'RoninAgent'
           },
           timeout: config.AI_TIMEOUT
         }

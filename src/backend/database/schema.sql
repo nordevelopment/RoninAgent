@@ -1,5 +1,5 @@
 -- ============================================
--- PAIAgent Database Schema
+-- RoninAgent Database Schema
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS sessions (

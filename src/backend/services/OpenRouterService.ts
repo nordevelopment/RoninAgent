@@ -39,7 +39,7 @@ class OpenRouterService {
       const response = await fetch('https://openrouter.ai/api/v1/models', {
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'OpenPAIAgent/2.5'
+          'User-Agent': 'RoninAgent/2.6'
         },
         signal: controller.signal
       });

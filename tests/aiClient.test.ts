@@ -91,7 +91,7 @@ describe('AIClient Tests', () => {
 
       expect(url).toBe('https://openrouter.ai/api/v1/chat/completions');
       expect(options.headers.Authorization).toBe('Bearer test-ai-key');
-      expect(options.headers['X-Title']).toBe('PAIAgent');
+      expect(options.headers['X-Title']).toBe('RoninAgent');
       expect(body.model).toBe('qwen/qwen3.5-flash-02-23');
       expect(body.messages.length).toBeGreaterThanOrEqual(2); // system + user
       expect(response.content).toBe('Hello, how can I help you?');

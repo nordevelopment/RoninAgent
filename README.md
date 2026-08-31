@@ -1,17 +1,17 @@
-# 🤖 Open PAIAgent - Open Personal AI Agent
+# ⚔️ RoninAgent — Open Source Autonomous AI Agent
 
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/nordevelopment?color=EA4AAA&style=flat-square)](https://github.com/sponsors/nordevelopment)
-[![GitHub Stars](https://img.shields.io/github/stars/nordevelopment/OpenPAIAgent?style=flat-square)](https://github.com/nordevelopment/OpenPAIAgent/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/nordevelopment/OpenPAIAgent?style=flat-square)](https://github.com/nordevelopment/OpenPAIAgent/network/members)
-[![GitHub Last Commit](https://img.shields.io/github/last-commit/nordevelopment/OpenPAIAgent?style=flat-square)](https://github.com/nordevelopment/OpenPAIAgent/commits/main)
+[![GitHub Stars](https://img.shields.io/github/stars/nordevelopment/RoninAgent?style=flat-square)](https://github.com/nordevelopment/RoninAgent/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/nordevelopment/RoninAgent?style=flat-square)](https://github.com/nordevelopment/RoninAgent/network/members)
+[![GitHub Last Commit](https://img.shields.io/github/last-commit/nordevelopment/RoninAgent?style=flat-square)](https://github.com/nordevelopment/RoninAgent/commits/main)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
 > ⭐ **Star Us on GitHub!**
-> If you find Open PAIAgent useful or inspiring, please consider giving this repository a star! It helps the project grow and fuels future development. 🚀
+> If you find RoninAgent useful or inspiring, please consider giving this repository a star! It helps the project grow and fuels future development. 🚀
 
-<a href="https://nordevelopment.github.io/OpenPAIAgent">Open PAIAgent project page</a>
+<a href="https://nordevelopment.github.io/RoninAgent">RoninAgent project page</a>
 
-Open PAIAgent is a high-speed, zero-bloat open-source personal AI agent built for absolute privacy and local execution. Designed as an ultra-lightweight alternative to resource-heavy frameworks, it drops complex abstractions like LangChain in favor of pure TypeScript performance, sub-second cold starts, and complete data sovereignty.
+RoninAgent is a high-speed, zero-bloat open-source personal AI agent built for absolute privacy, local execution, and total autonomy. Designed as an ultra-lightweight alternative to resource-heavy frameworks, it drops complex abstractions like LangChain in favor of pure TypeScript performance, sub-second cold starts, and complete data sovereignty.
 
 ---
 
@@ -38,7 +38,7 @@ Open PAIAgent is a high-speed, zero-bloat open-source personal AI agent built fo
 
 ## 🧠 Key Architectural Decisions
 
-Open PAIAgent is built with a clear focus on lightweight, efficient, and transparent AI engineering:
+RoninAgent is built with a clear focus on lightweight, efficient, and transparent AI engineering:
 
 * **Why No LangChain / LlamaIndex?**
   * **Complete State Control**: The agent's cognitive loop (think-act-evaluate) is written in vanilla TypeScript, ensuring complete control over LLM tool-calling and historical state.
@@ -54,7 +54,7 @@ Open PAIAgent is built with a clear focus on lightweight, efficient, and transpa
 This project is designed for anyone who wants a personal AI assistant that can seamlessly process documents (read & create PDF, Word, Excel, and text files), browse the web, generate images, and communicate smoothly through a slick web interface or remotely on-the-go via a Telegram bot.
 
 ### 🔒 100% Self-Hosted & Private
-OpenPAIAgent runs entirely on your local machine or private server. All chat history, settings, and workspace documents are stored in a local SQLite database. Your private data never leaves your computer, and you retain absolute control over which external APIs (like OpenRouter or Together AI) are called.
+RoninAgent runs entirely on your local machine or private server. All chat history, settings, and workspace documents are stored in a local SQLite database. Your private data never leaves your computer, and you retain absolute control over which external APIs (like OpenRouter or Together AI) are called.
 
 ### 🔓 Fully Open Source
 Built with clean TypeScript and vanilla web technologies under the MIT license. No massive, opaque frameworks (like LangChain) or hidden tracking. You have full transparency, can easily audit the source code, and can freely modify or extend the agent's tools and behaviors.
@@ -80,8 +80,8 @@ Built with clean TypeScript and vanilla web technologies under the MIT license. 
 
 ### 1. Clone & Install Dependencies
 ```bash
-git clone https://github.com/nordevelopment/OpenPAIAgent
-cd OpenPAIAgent
+git clone https://github.com/nordevelopment/RoninAgent
+cd RoninAgent
 npm install
 ```
 *(Alternatively, you can download and extract the ZIP archive directly from GitHub).*
@@ -112,7 +112,7 @@ npm run build
 
 ## 🔒 Security
 
-PAIAgent includes built-in security features to protect your server, files, and API balances when deployed remotely. **These security settings can be easily configured either during the first-launch setup wizard, or later at any time via the Web Settings Panel (`/settings` page in the UI).**
+RoninAgent includes built-in security features to protect your server, files, and API balances when deployed remotely. **These security settings can be easily configured either during the first-launch setup wizard, or later at any time via the Web Settings Panel (`/settings` page in the UI).**
 
 *   **HTTP Basic Auth**: Lock the Web UI and API endpoints behind a password. Set `APP_PASSWORD` (and optionally `APP_USER`) in your `.env` (or via Settings UI) to enable it. Leaving `APP_PASSWORD` empty disables authentication (ideal for local localhost use).
 *   **Telegram Bot Whitelist**: Restrict access to your Telegram bot. Set `ALLOWED_TELEGRAM_USER_IDS` in your `.env` (or via Settings UI) with a comma-separated list of Telegram User IDs to prevent unauthorized users from using your bot and API balances.
@@ -136,9 +136,9 @@ https://www.youtube.com/watch?v=rcRkP_UiDRo
 
 ---
 
-## ⚖️ Comparison: Open PAIAgent vs. Heavyweight Alternatives
+## ⚖️ Comparison: RoninAgent vs. Heavyweight Alternatives
 
-While other self-hosted AI interfaces require heavy setups (Docker, multi-container databases, etc.), **Open PAIAgent** is optimized for raw local performance and resource conservation:
+While other self-hosted AI interfaces require heavy setups (Docker, multi-container databases, etc.), **RoninAgent** is optimized for raw local performance and resource conservation:
 
 * **RAM Footprint**: **~50-100 MB** (compared to 1.5 GB+ for Open WebUI or 1 GB+ for LibreChat).
 * **Startup Time**: **Sub-second (< 1s)** (compared to 30-60s boot times for Docker-based alternatives).
