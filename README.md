@@ -120,17 +120,13 @@ PAIAgent includes built-in security features to protect your server, files, and 
 https://www.youtube.com/watch?v=rcRkP_UiDRo
 
 ## 📸 Screenshots
-<img width="1580" height="937" alt="Image" src="https://github.com/user-attachments/assets/14f2c727-b073-4458-9948-0dc4fc43e9af" />
+<img width="1516" height="916" alt="Image" src="https://github.com/user-attachments/assets/bf8ba19e-c3ba-49ca-b813-4e68f3c9ef11" />
 
-<img width="1584" height="939" alt="Image" src="https://github.com/user-attachments/assets/f965ff2a-9f6b-4bdf-8094-62dfd4c44c06" />
+<img width="1508" height="925" alt="Image" src="https://github.com/user-attachments/assets/52193bb6-4492-4e95-a0cb-5c059f191b8b" />
 
-<img width="1496" height="935" alt="Image" src="https://github.com/user-attachments/assets/2dc6baa3-3c20-4a6b-bd00-dc3e7d5d3340" />
+<img width="1361" height="911" alt="Image" src="https://github.com/user-attachments/assets/cbdcec8a-f5a7-40c3-8455-dadbad699310" />
 
-<img width="1368" height="924" alt="Image" src="https://github.com/user-attachments/assets/536cc7f6-0c56-4fd0-9f0a-d24458eaf805" />
-
-<img width="1011" height="949" alt="Image" src="https://github.com/user-attachments/assets/3909c891-e971-4e6d-a2d3-8ba61b2dc02a" />
-
-
+<img width="1491" height="736" alt="Image" src="https://github.com/user-attachments/assets/5c351b63-37e8-457d-b420-46b8c155e9a4" />
 
 ---
 
