@@ -136,25 +136,18 @@ export class AgentService {
                     fs.writeFileSync(destFile, '', 'utf-8');
                 }
             }
-
-            // Copy skills directory if it exists
-            const srcSkillsDir = path.join(templatePath, 'skills');
-            const destSkillsDir = path.join(newAgentPath, 'skills');
-            if (fs.existsSync(srcSkillsDir)) {
-                fs.mkdirSync(destSkillsDir, { recursive: true });
-                const skillFiles = fs.readdirSync(srcSkillsDir);
-                for (const file of skillFiles) {
-                    if (file.endsWith('.md')) {
-                        fs.copyFileSync(path.join(srcSkillsDir, file), path.join(destSkillsDir, file));
-                    }
-                }
-            }
         } else {
             // Fallback: create empty files
             for (const filename of this.ALLOWED_EDIT_FILES) {
                 const destFile = path.join(newAgentPath, filename);
                 fs.writeFileSync(destFile, '', 'utf-8');
             }
+        }
+
+        // Ensure local skills directory exists for agent-specific custom skills
+        const destSkillsDir = path.join(newAgentPath, 'skills');
+        if (!fs.existsSync(destSkillsDir)) {
+            fs.mkdirSync(destSkillsDir, { recursive: true });
         }
     }
 

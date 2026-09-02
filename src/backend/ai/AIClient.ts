@@ -95,128 +95,114 @@ export class AIClient {
   }
 
   /**
-   * Search for matching skills inside agents/<agentId>/skills/ based on query
+   * Resolve and match dynamic skills for a given agent and query.
+   * Scans local agent skills (agents/<agentId>/skills/) and shared global skills (skills/),
+   * with local skills taking priority (overriding shared skills with identical filenames).
    */
-  getMatchingSkills(agentId: string, query: string): string {
-    if (!query) return '';
+  private resolveMatchingSkills(agentId: string, query: string): Array<{ name: string; body: string; filename: string; isLocal: boolean }> {
+    if (!query) return [];
 
-    const agentPath = path.join(__dirname, `../../../agents/${agentId}`);
-    const skillsDirPath = path.join(agentPath, 'skills');
-
-    if (!fs.existsSync(skillsDirPath) || !fs.statSync(skillsDirPath).isDirectory()) {
-      return '';
-    }
-
-    const files = fs.readdirSync(skillsDirPath);
-    const matchedSkills: string[] = [];
-    // Strip URLs to prevent keyword matching inside links (e.g., 'development' in amazon URL)
     const queryLower = query.replace(/https?:\/\/[^\s]+/g, '').toLowerCase();
+    const candidateFiles = new Map<string, { filePath: string; isLocal: boolean }>();
 
-    for (const file of files) {
-      if (file.endsWith('.md')) {
-        const filePath = path.join(skillsDirPath, file);
-        try {
-          const content = fs.readFileSync(filePath, 'utf-8');
-          const lines = content.split(/\r?\n/);
-          if (lines.length === 0) continue;
-
-          const firstLine = lines[0].trim();
-          let keywords: string[] = [];
-          let body = '';
-
-          if (firstLine.toLowerCase().startsWith('keywords:')) {
-            keywords = firstLine
-              .substring(9)
-              .split(',')
-              .map(k => k.trim().toLowerCase())
-              .filter(k => k.length > 0);
-            body = lines.slice(1).join('\n').trim();
-          } else {
-            // Fallback: use filename without extension as keyword
-            const filenameKeyword = file.substring(0, file.lastIndexOf('.')).toLowerCase();
-            keywords = [filenameKeyword];
-            body = content.trim();
+    // 1. Scan agent-specific local skills (higher priority)
+    if (agentId) {
+      const localSkillsDir = path.join(__dirname, `../../../agents/${agentId}/skills`);
+      if (fs.existsSync(localSkillsDir) && fs.statSync(localSkillsDir).isDirectory()) {
+        const localFiles = fs.readdirSync(localSkillsDir);
+        for (const file of localFiles) {
+          if (file.endsWith('.md')) {
+            candidateFiles.set(file.toLowerCase(), {
+              filePath: path.join(localSkillsDir, file),
+              isLocal: true,
+            });
           }
-
-          const isMatched = keywords.some(keyword => {
-            if (!keyword) return false;
-            const escaped = keyword.replace(/[\/\\^$*+?.()|[\]{}]/g, '\\$&');
-            // Match whole word using Unicode property escapes (not preceded or followed by any letter)
-            const regex = new RegExp(`(?<!\\p{L})${escaped}(?!\\p{L})`, 'gu');
-            return regex.test(queryLower);
-          });
-
-          if (isMatched) {
-            const skillName = file.substring(0, file.lastIndexOf('.')).toUpperCase();
-            matchedSkills.push(`### SKILL: ${skillName}\n${body}`);
-            logger.debug(`[AIClient] Dynamic skill loaded: ${file}`);
-          }
-        } catch (err) {
-          logger.error({ err }, `[AIClient] Failed to read skill file ${file}`);
         }
       }
     }
 
-    return matchedSkills.join('\n\n');
+    // 2. Scan shared global skills (fallback/base)
+    const sharedSkillsDir = path.join(__dirname, '../../../skills');
+    if (fs.existsSync(sharedSkillsDir) && fs.statSync(sharedSkillsDir).isDirectory()) {
+      const sharedFiles = fs.readdirSync(sharedSkillsDir);
+      for (const file of sharedFiles) {
+        const key = file.toLowerCase();
+        if (file.endsWith('.md') && !candidateFiles.has(key)) {
+          candidateFiles.set(key, {
+            filePath: path.join(sharedSkillsDir, file),
+            isLocal: false,
+          });
+        }
+      }
+    }
+
+    const matchedSkills: Array<{ name: string; body: string; filename: string; isLocal: boolean }> = [];
+
+    for (const [filenameKey, { filePath, isLocal }] of candidateFiles.entries()) {
+      try {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        const lines = content.split(/\r?\n/);
+        if (lines.length === 0) continue;
+
+        const firstLine = lines[0].trim();
+        let keywords: string[] = [];
+        let body = '';
+
+        if (firstLine.toLowerCase().startsWith('keywords:')) {
+          keywords = firstLine
+            .substring(9)
+            .split(',')
+            .map(k => k.trim().toLowerCase())
+            .filter(k => k.length > 0);
+          body = lines.slice(1).join('\n').trim();
+        } else {
+          // Fallback: use filename without extension as keyword
+          const filenameKeyword = filenameKey.replace(/\.md$/, '');
+          keywords = [filenameKeyword];
+          body = content.trim();
+        }
+
+        const isMatched = keywords.some(keyword => {
+          if (!keyword) return false;
+          const escaped = keyword.replace(/[\/\\^$*+?.()|[\]{}]/g, '\\$&');
+          // Match whole word using Unicode property escapes (not preceded or followed by any letter)
+          const regex = new RegExp(`(?<!\\p{L})${escaped}(?!\\p{L})`, 'gu');
+          return regex.test(queryLower);
+        });
+
+        if (isMatched) {
+          const rawBasename = path.basename(filePath, '.md');
+          const skillName = rawBasename.toUpperCase();
+          matchedSkills.push({
+            name: skillName,
+            body,
+            filename: path.basename(filePath),
+            isLocal,
+          });
+          logger.debug(`[AIClient] Dynamic skill loaded: ${path.basename(filePath)} (${isLocal ? 'local override' : 'shared'})`);
+        }
+      } catch (err) {
+        logger.error({ err }, `[AIClient] Failed to read skill file ${filePath}`);
+      }
+    }
+
+    return matchedSkills;
   }
 
   /**
-   * Search for matching skills inside agents/<agentId>/skills/ and return their names
+   * Search for matching skills (local agent skills + global shared skills) based on query
+   */
+  getMatchingSkills(agentId: string, query: string): string {
+    const matched = this.resolveMatchingSkills(agentId, query);
+    return matched.map(s => `### SKILL: ${s.name}\n${s.body}`).join('\n\n');
+  }
+
+  /**
+   * Search for matching skills (local agent skills + global shared skills) and return their names
    */
   getMatchingSkillsList(agentId: string, query: string): string[] {
-    if (!query) return [];
-
-    const agentPath = path.join(__dirname, `../../../agents/${agentId}`);
-    const skillsDirPath = path.join(agentPath, 'skills');
-
-    if (!fs.existsSync(skillsDirPath) || !fs.statSync(skillsDirPath).isDirectory()) {
-      return [];
-    }
-
-    const files = fs.readdirSync(skillsDirPath);
-    const matchedNames: string[] = [];
-    const queryLower = query.replace(/https?:\/\/[^\s]+/g, '').toLowerCase();
-
-    for (const file of files) {
-      if (file.endsWith('.md')) {
-        const filePath = path.join(skillsDirPath, file);
-        try {
-          const content = fs.readFileSync(filePath, 'utf-8');
-          const lines = content.split(/\r?\n/);
-          if (lines.length === 0) continue;
-
-          const firstLine = lines[0].trim();
-          let keywords: string[] = [];
-
-          if (firstLine.toLowerCase().startsWith('keywords:')) {
-            keywords = firstLine
-              .substring(9)
-              .split(',')
-              .map(k => k.trim().toLowerCase())
-              .filter(k => k.length > 0);
-          } else {
-            const filenameKeyword = file.substring(0, file.lastIndexOf('.')).toLowerCase();
-            keywords = [filenameKeyword];
-          }
-
-          const isMatched = keywords.some(keyword => {
-            if (!keyword) return false;
-            const escaped = keyword.replace(/[\/\\^$*+?.()|[\]{}]/g, '\\$&');
-            const regex = new RegExp(`(?<!\\p{L})${escaped}(?!\\p{L})`, 'gu');
-            return regex.test(queryLower);
-          });
-
-          if (isMatched) {
-            const skillName = file.substring(0, file.lastIndexOf('.')).toUpperCase();
-            matchedNames.push(skillName);
-          }
-        } catch (err) {
-          // ignore
-        }
-      }
-    }
-
-    return matchedNames;
+    const matched = this.resolveMatchingSkills(agentId, query);
+    return matched.map(s => s.name);
   }
 
 

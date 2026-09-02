@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
 import fs from 'fs';
 import fsp from 'fs/promises';
+import path from 'path';
 import { AIClient, AIMessages } from '../src/backend/ai/AIClient.js';
 import { config } from '../src/backend/config.js';
 
@@ -48,10 +49,13 @@ describe('AIClient Tests', () => {
   });
 
   describe('Dynamic Skills Matching', () => {
-    it('matches skills by keyword in query', () => {
-      // Test with main_agent skills
-      const matched = aiClient.getMatchingSkills('main_agent', 'tell me a web search query');
+    it('matches shared global skills by keyword in query', () => {
+      const matched = aiClient.getMatchingSkills('main_agent', 'please research and find info about typescript');
       expect(typeof matched).toBe('string');
+      expect(matched).toContain('SKILL: WEB_RESEARCHER');
+
+      const names = aiClient.getMatchingSkillsList('main_agent', 'please research and find info about typescript');
+      expect(names).toContain('WEB_RESEARCHER');
     });
 
     it('returns empty string if query is empty', () => {
@@ -59,9 +63,24 @@ describe('AIClient Tests', () => {
       expect(aiClient.getMatchingSkillsList('main_agent', '')).toEqual([]);
     });
 
-    it('returns empty string if agent skills dir does not exist', () => {
-      expect(aiClient.getMatchingSkills('invalid_agent_xyz', 'test query')).toBe('');
-      expect(aiClient.getMatchingSkillsList('invalid_agent_xyz', 'test query')).toEqual([]);
+    it('returns empty string if query has no matching keywords', () => {
+      expect(aiClient.getMatchingSkills('invalid_agent_xyz', 'unmatched_random_query_string_12345')).toBe('');
+      expect(aiClient.getMatchingSkillsList('invalid_agent_xyz', 'unmatched_random_query_string_12345')).toEqual([]);
+    });
+
+    it('allows agent-specific local skill to override global shared skill', () => {
+      const mockAgentPath = path.join(__dirname, '../agents/mock_test_agent/skills');
+      fs.mkdirSync(mockAgentPath, { recursive: true });
+      const overrideFile = path.join(mockAgentPath, 'coding.md');
+      fs.writeFileSync(overrideFile, 'Keywords: code, python, coding\nCUSTOM LOCAL CODING SKILL INSTRUCTIONS');
+
+      try {
+        const matched = aiClient.getMatchingSkills('mock_test_agent', 'write some python code');
+        expect(matched).toContain('CUSTOM LOCAL CODING SKILL INSTRUCTIONS');
+        expect(matched).not.toContain('Clean Architecture'); // from global skill
+      } finally {
+        fs.rmSync(path.join(__dirname, '../agents/mock_test_agent'), { recursive: true, force: true });
+      }
     });
   });
 
