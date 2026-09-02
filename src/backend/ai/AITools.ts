@@ -41,14 +41,40 @@ export interface ToolMiddleware {
 }
 
 /**
- * Helper to extract path argument taking all aliases into account
+ * Helper to extract path argument taking all aliases, casing, and nested structures into account
  */
 export function extractPathArgument(args?: Record<string, unknown>): string | undefined {
   if (!args || typeof args !== 'object') return undefined;
-  const target = (args.path || args.filePath || args.file_path || args.filepath || args.targetPath || args.target_path || args.filename || args.file) as string;
-  if (typeof target === 'string' && target.trim().length > 0) {
-    return target.trim();
+
+  // 1. Direct candidate keys check
+  const candidateKeys = [
+    'path', 'filePath', 'file_path', 'filepath',
+    'targetPath', 'target_path', 'targetpath',
+    'filename', 'fileName', 'file_name',
+    'file', 'name', 'target',
+    'outputPath', 'output_path', 'output',
+    'destination', 'dest',
+    'relative_path', 'relativePath', 'rel_path',
+    'doc_name', 'document_name', 'uri', 'location'
+  ];
+
+  for (const key of candidateKeys) {
+    const val = (args as any)[key];
+    if (typeof val === 'string' && val.trim().length > 0) {
+      return val.trim();
+    }
   }
+
+  // 2. Check nested containers if present (e.g. args.input.path, args.params.filePath)
+  const containerKeys = ['input', 'params', 'arguments', 'data', 'payload', 'options', 'body', 'file'];
+  for (const containerKey of containerKeys) {
+    const container = (args as any)[containerKey];
+    if (container && typeof container === 'object' && !Array.isArray(container)) {
+      const nestedPath = extractPathArgument(container as Record<string, unknown>);
+      if (nestedPath) return nestedPath;
+    }
+  }
+
   return undefined;
 }
 

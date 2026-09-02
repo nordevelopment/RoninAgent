@@ -64,11 +64,29 @@ export class ChatManager {
   /**
    * Safely parse tool arguments from AI model with auto-recovery for truncated/malformed JSON strings
    */
-  private safeParseToolArguments(rawArgs: string, toolName?: string): Record<string, unknown> {
-    if (!rawArgs || typeof rawArgs !== 'string') return {};
+  private safeParseToolArguments(rawArgs: string | Record<string, unknown>, toolName?: string): Record<string, unknown> {
+    if (!rawArgs) return {};
 
     const normalizeResult = (obj: any): Record<string, unknown> => {
       if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+        // Flatten nested common sub-objects if present
+        if (obj.input && typeof obj.input === 'object' && !Array.isArray(obj.input)) {
+          Object.assign(obj, obj.input);
+        }
+        if (obj.params && typeof obj.params === 'object' && !Array.isArray(obj.params)) {
+          Object.assign(obj, obj.params);
+        }
+        if (obj.arguments && typeof obj.arguments === 'object' && !Array.isArray(obj.arguments)) {
+          Object.assign(obj, obj.arguments);
+        }
+        if (obj.data && typeof obj.data === 'object' && !Array.isArray(obj.data)) {
+          Object.assign(obj, obj.data);
+        }
+        if (obj.file && typeof obj.file === 'object' && !Array.isArray(obj.file)) {
+          const nestedPath = extractPathArgument(obj.file);
+          if (nestedPath && !obj.path) obj.path = nestedPath;
+        }
+
         const resolvedPath = extractPathArgument(obj);
         if (resolvedPath && !obj.path) {
           obj.path = resolvedPath;
@@ -76,6 +94,12 @@ export class ChatManager {
       }
       return obj || {};
     };
+
+    if (typeof rawArgs === 'object') {
+      return normalizeResult(rawArgs);
+    }
+
+    if (typeof rawArgs !== 'string') return {};
 
     try {
       return normalizeResult(JSON.parse(rawArgs));
@@ -108,8 +132,8 @@ export class ChatManager {
 
       // Attempt 3: Regex extraction for write_file / generate_pdf / read_file
       if (toolName === 'write_file' || toolName === 'generate_pdf' || toolName === 'generate_docx' || rawArgs.includes('"content"') || rawArgs.includes('"path"')) {
-        const pathMatch = rawArgs.match(/"(?:path|filePath|file_path|targetPath|filename|file)"\s*:\s*"([^"]+)"/);
-        const contentMatch = rawArgs.match(/"(?:content|html|markdown)"\s*:\s*"([\s\S]*)/);
+        const pathMatch = rawArgs.match(/"(?:path|filePath|file_path|filepath|targetPath|target_path|targetpath|filename|fileName|file_name|file|name|target|outputPath|output_path|output|destination|dest|relative_path|relativePath)"\s*:\s*"([^"]+)"/);
+        const contentMatch = rawArgs.match(/"(?:content|html|markdown|text)"\s*:\s*"([\s\S]*)/);
         const pathVal = pathMatch ? pathMatch[1] : undefined;
         let contentVal = '';
         if (contentMatch) {

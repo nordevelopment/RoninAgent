@@ -19,6 +19,14 @@ describe('AITools & Path Extraction', () => {
       expect(extractPathArgument({ file: 'file5.txt' })).toBe('file5.txt');
       expect(extractPathArgument({ targetPath: 'file6.txt' })).toBe('file6.txt');
       expect(extractPathArgument({ target_path: 'file7.txt' })).toBe('file7.txt');
+      expect(extractPathArgument({ name: 'file8.txt' })).toBe('file8.txt');
+      expect(extractPathArgument({ outputPath: 'file9.txt' })).toBe('file9.txt');
+    });
+
+    it('resolves nested path containers such as input.path or file.path', () => {
+      expect(extractPathArgument({ input: { path: 'nested/file.txt' } })).toBe('nested/file.txt');
+      expect(extractPathArgument({ file: { filePath: 'nested/file2.txt' } })).toBe('nested/file2.txt');
+      expect(extractPathArgument({ params: { filename: 'nested/file3.txt' } })).toBe('nested/file3.txt');
     });
 
     it('returns undefined when no valid path is found or args is empty', () => {
@@ -54,6 +62,21 @@ describe('AITools & Path Extraction', () => {
       const result = await aiTools.executeTool({
         name: 'write_file',
         arguments: { filePath: 'test_alternative_path_key.txt', content: 'test data' }
+      }, 'test_session');
+
+      expect(result.result).toBe('File written successfully.');
+    });
+
+    it('accepts nested path structures like input.path in write_file', async () => {
+      const fsManager = new FileSystemManager([path.resolve(process.cwd(), 'workspace')]);
+      vi.spyOn(fsManager, 'writeFile').mockResolvedValue(undefined as never);
+      const webPage = new WebPageContent();
+      const officeService = new OfficeDocumentService();
+      const aiTools = new AITools(fsManager, webPage, officeService);
+
+      const result = await aiTools.executeTool({
+        name: 'write_file',
+        arguments: { input: { path: 'test_nested_path.txt' }, content: 'nested data' }
       }, 'test_session');
 
       expect(result.result).toBe('File written successfully.');
