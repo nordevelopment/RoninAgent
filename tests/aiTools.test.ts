@@ -37,9 +37,24 @@ describe('AITools & Path Extraction', () => {
     });
   });
 
-  describe('write_file validation', () => {
-    it('returns a clean and descriptive error when path is missing rather than internal validator crash', async () => {
+  describe('tool path validation & auto-fallback', () => {
+    it('returns a clean and descriptive error when path is missing on read_file', async () => {
       const fsManager = new FileSystemManager([path.resolve(process.cwd(), 'workspace')]);
+      const webPage = new WebPageContent();
+      const officeService = new OfficeDocumentService();
+      const aiTools = new AITools(fsManager, webPage, officeService);
+
+      const result = await aiTools.executeTool({
+        name: 'read_file',
+        arguments: {}
+      }, 'test_session');
+
+      expect(result.result).toContain("The 'path' argument is required for tool 'read_file'");
+    });
+
+    it('auto-assigns session fallback path for write_file when path is completely omitted', async () => {
+      const fsManager = new FileSystemManager([path.resolve(process.cwd(), 'workspace')]);
+      vi.spyOn(fsManager, 'writeFile').mockResolvedValue(undefined as never);
       const webPage = new WebPageContent();
       const officeService = new OfficeDocumentService();
       const aiTools = new AITools(fsManager, webPage, officeService);
@@ -47,9 +62,9 @@ describe('AITools & Path Extraction', () => {
       const result = await aiTools.executeTool({
         name: 'write_file',
         arguments: { content: 'test content without path' }
-      }, 'test_session');
+      }, 'test_session_fallback');
 
-      expect(result.result).toContain("The 'path' argument is required for tool 'write_file'");
+      expect(result.result).toBe('File written successfully.');
     });
 
     it('accepts alternative path keys like filePath in write_file', async () => {

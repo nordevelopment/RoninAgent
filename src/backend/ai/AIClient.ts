@@ -320,7 +320,6 @@ export class AIClient {
       messages: messagesWithSystem,
       temperature: config.AI_TEMPERATURE,
       max_tokens: config.AI_MAX_TOKENS,
-      top_p: config.AI_TOP_P,
     };
 
     // If tools are passed, add them to the request
