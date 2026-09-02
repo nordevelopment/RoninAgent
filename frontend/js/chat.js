@@ -35,6 +35,10 @@ class AIAgentChat {
         this.selectedImageBase64 = null;
         this.selectedFiles = [];
 
+        this.stopButton = document.getElementById('stopButton');
+        this.typingStopButton = document.getElementById('typingStopButton');
+        this.currentAbortController = null;
+
         this.init();
     }
 
@@ -72,6 +76,13 @@ class AIAgentChat {
         await this.getCurrentSession();
 
         this.sendButton.addEventListener('click', () => this.sendMessage());
+        if (this.stopButton) {
+            this.stopButton.addEventListener('click', () => this.stopGeneration());
+        }
+        if (this.typingStopButton) {
+            this.typingStopButton.addEventListener('click', () => this.stopGeneration());
+        }
+
         this.messageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -475,6 +486,12 @@ class AIAgentChat {
         console.log('Sending message:', { message, hasImage: !!image, filesCount: filesToUpload.length, sessionId: this.sessionId });
 
         this.isLoading = true;
+        this.currentAbortController = new AbortController();
+
+        if (this.stopButton) {
+            this.sendButton.style.display = 'none';
+            this.stopButton.style.display = 'flex';
+        }
         this.sendButton.disabled = true;
         this.messageInput.disabled = true;
 
@@ -525,6 +542,7 @@ class AIAgentChat {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                signal: this.currentAbortController.signal,
                 body: JSON.stringify({
                     message: message,
                     sessionId: this.sessionId,
@@ -574,18 +592,86 @@ class AIAgentChat {
             }
 
         } catch (error) {
-            console.error('Chat error:', error);
-            this.hideTyping();
-            this.addMessage('⚠️ NEURAL INTERFACE ERROR. Retry transmission.', 'agent');
-            if (window.robotPet) {
-                window.robotPet.toError();
+            if (error.name === 'AbortError' || this.currentAbortController?.signal?.aborted) {
+                console.log('Chat generation aborted by user.');
+                this.hideTyping();
+                this.addSystemMessage('AI Generation Stopped', null, 'Process was cancelled by user.', true, '🛑');
+            } else {
+                console.error('Chat error:', error);
+                this.hideTyping();
+                this.addMessage('⚠️ NEURAL INTERFACE ERROR. Retry transmission.', 'agent');
+                if (window.robotPet) {
+                    window.robotPet.toError();
+                }
             }
         } finally {
             this.isLoading = false;
+            this.currentAbortController = null;
+            if (this.stopButton) {
+                this.stopButton.style.display = 'none';
+                this.sendButton.style.display = 'flex';
+            }
             this.sendButton.disabled = false;
             this.messageInput.disabled = false;
             this.messageInput.focus();
+
+            const typingTextEl = this.typingIndicator?.querySelector('.typing-text');
+            if (typingTextEl) {
+                typingTextEl.textContent = 'AI IS THINKING...';
+            }
         }
+    }
+
+    async stopGeneration() {
+        if (!this.isLoading) return;
+
+        console.log('Stopping active AI generation for session:', this.sessionId);
+
+        // 1. Abort client-side streaming fetch
+        if (this.currentAbortController) {
+            try {
+                this.currentAbortController.abort();
+            } catch (e) {
+                console.warn('Abort error:', e);
+            }
+        }
+
+        // 2. Notify backend to abort session processing
+        try {
+            await fetch('/api/chat/stop', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ sessionId: this.sessionId })
+            });
+        } catch (err) {
+            console.warn('Failed to send stop signal to backend:', err);
+        }
+
+        // 3. Reset UI state immediately
+        this.hideTyping();
+        this.isLoading = false;
+        this.currentAbortController = null;
+
+        if (this.stopButton) {
+            this.stopButton.style.display = 'none';
+            this.sendButton.style.display = 'flex';
+        }
+        this.sendButton.disabled = false;
+        this.messageInput.disabled = false;
+        this.messageInput.focus();
+
+        const typingTextEl = this.typingIndicator?.querySelector('.typing-text');
+        if (typingTextEl) {
+            typingTextEl.textContent = 'AI IS THINKING...';
+        }
+
+        if (window.robotPet) {
+            window.robotPet.toIdle();
+        }
+
+        this.addSystemMessage('AI Generation Stopped', null, 'Process was cancelled by user.', true, '🛑');
     }
 
     handleSSEEvent(eventName, eventData) {

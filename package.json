@@ -1,6 +1,6 @@
 {
   "name": "ronin-agent",
-  "version": "2.6.3",
+  "version": "2.6.5",
   "description": "RoninAgent — Lightweight, sovereign, zero-bloat open-source personal AI agent",
   "author": "Norayr Petrosyan",
   "license": "MIT",
