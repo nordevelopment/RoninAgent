@@ -8,7 +8,7 @@
 import { AIClient, AIMessages } from './AIClient.js';
 import { ChatHistoryManager } from './ChatHistoryManager.js';
 import { SessionManager } from './SessionManager.js';
-import { AITools } from './AITools.js';
+import { AITools, extractPathArgument } from './AITools.js';
 import { MemoryManager } from './MemoryManager.js';
 import { config } from '../config.js';
 import logger from '../utils/logger.js';
@@ -50,8 +50,18 @@ export class ChatManager {
   private safeParseToolArguments(rawArgs: string, toolName?: string): Record<string, unknown> {
     if (!rawArgs || typeof rawArgs !== 'string') return {};
 
+    const normalizeResult = (obj: any): Record<string, unknown> => {
+      if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+        const resolvedPath = extractPathArgument(obj);
+        if (resolvedPath && !obj.path) {
+          obj.path = resolvedPath;
+        }
+      }
+      return obj || {};
+    };
+
     try {
-      return JSON.parse(rawArgs);
+      return normalizeResult(JSON.parse(rawArgs));
     } catch (primaryErr) {
       logger.warn({ rawLength: rawArgs.length }, '[ChatManager] Standard JSON.parse failed on tool arguments. Attempting auto-recovery...');
 
@@ -63,7 +73,7 @@ export class ChatManager {
           if (c === '\t') return '\\t';
           return '';
         });
-        return JSON.parse(sanitized);
+        return normalizeResult(JSON.parse(sanitized));
       } catch {}
 
       // Attempt 2: Auto-close truncated JSON string/object (e.g. hitting token limits)
@@ -76,13 +86,7 @@ export class ChatManager {
           repaired += '}';
         }
         const parsed = JSON.parse(repaired);
-        if (!parsed.path && !parsed.filePath && !parsed.file_path && !parsed.targetPath && !parsed.filename) {
-          const pathMatch = rawArgs.match(/"(?:path|filePath|file_path|targetPath|filename|file)"\s*:\s*"([^"]+)"/);
-          if (pathMatch) {
-            parsed.path = pathMatch[1];
-          }
-        }
-        return parsed;
+        return normalizeResult(parsed);
       } catch {}
 
       // Attempt 3: Regex extraction for write_file / generate_pdf / read_file
@@ -97,11 +101,11 @@ export class ChatManager {
           contentVal = contentVal.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '\r');
         }
         if (pathVal || contentVal) {
-          return {
+          return normalizeResult({
             path: pathVal,
             content: contentVal,
             html: contentVal
-          };
+          });
         }
       }
 

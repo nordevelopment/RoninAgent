@@ -41,13 +41,30 @@ export interface ToolMiddleware {
 }
 
 /**
+ * Helper to extract path argument taking all aliases into account
+ */
+export function extractPathArgument(args?: Record<string, unknown>): string | undefined {
+  if (!args || typeof args !== 'object') return undefined;
+  const target = (args.path || args.filePath || args.file_path || args.filepath || args.targetPath || args.target_path || args.filename || args.file) as string;
+  if (typeof target === 'string' && target.trim().length > 0) {
+    return target.trim();
+  }
+  return undefined;
+}
+
+/**
  * Middleware: requireReadBeforeWrite Security Policy
  */
 const RequireReadBeforeWriteMiddleware: ToolMiddleware = {
   name: 'RequireReadBeforeWrite',
   async onBeforeExecute(ctx) {
     if (ctx.toolCall.name === 'write_file') {
-      const p = ctx.toolCall.arguments.path as string;
+      const p = extractPathArgument(ctx.toolCall.arguments);
+      if (!p) {
+        throw new Error(
+          `The 'path' argument is required for tool 'write_file'. Please provide a valid non-empty file path within workspace/ (e.g. 'session_xxx/output.txt').`
+        );
+      }
       const normalized = ctx.fsManager.validatePath(p);
       const fileExists = fsSync.existsSync(normalized);
       const sId = ctx.sessionId || 'default';
@@ -63,8 +80,8 @@ const RequireReadBeforeWriteMiddleware: ToolMiddleware = {
   },
   async onAfterExecute(ctx, result) {
     const { name, arguments: args } = ctx.toolCall;
-    const p = (args?.path || args?.filePath || args?.file_path || args?.targetPath || args?.filename || args?.file) as string;
-    if ((name === 'read_file' || name === 'write_file') && p && typeof p === 'string') {
+    const p = extractPathArgument(args);
+    if ((name === 'read_file' || name === 'write_file') && p) {
       try {
         const normalized = ctx.fsManager.validatePath(p);
         const sId = ctx.sessionId || 'default';
@@ -127,9 +144,10 @@ const GracefulFallbackMiddleware: ToolMiddleware = {
 };
 
 export class AITools {
-  private fsManager = new FileSystemManager();
-  private webPage = new WebPageContent();
-  private officeService = new OfficeDocumentService();
+  private fsManager: FileSystemManager;
+  private webPage: WebPageContent;
+  private officeService: OfficeDocumentService;
+  private memoryManager?: MemoryManager;
 
   /**
    * Tracks files that have been read in each session to enforce
@@ -146,7 +164,31 @@ export class AITools {
     GracefulFallbackMiddleware
   ];
 
-  constructor(private memoryManager?: MemoryManager) { }
+  constructor(memoryManager?: MemoryManager);
+  constructor(
+    fsManager?: FileSystemManager,
+    webPage?: WebPageContent,
+    officeService?: OfficeDocumentService,
+    memoryManager?: MemoryManager
+  );
+  constructor(
+    arg1?: MemoryManager | FileSystemManager,
+    arg2?: WebPageContent,
+    arg3?: OfficeDocumentService,
+    arg4?: MemoryManager
+  ) {
+    if (arg1 instanceof FileSystemManager) {
+      this.fsManager = arg1;
+      this.webPage = arg2 || new WebPageContent();
+      this.officeService = arg3 || new OfficeDocumentService();
+      this.memoryManager = arg4;
+    } else {
+      this.memoryManager = arg1;
+      this.fsManager = new FileSystemManager();
+      this.webPage = new WebPageContent();
+      this.officeService = new OfficeDocumentService();
+    }
+  }
 
   /**
    * Register a custom tool middleware
@@ -232,11 +274,11 @@ export class AITools {
     const { sessionId } = ctx;
 
     const getPath = (): string => {
-      const target = (args?.path || args?.filePath || args?.file_path || args?.filepath || args?.targetPath || args?.target_path || args?.filename || args?.file) as string;
-      if (!target || typeof target !== 'string' || !target.trim()) {
+      const target = extractPathArgument(args);
+      if (!target) {
         throw new Error(`The 'path' argument is required for tool '${name}'. Please provide a valid file path.`);
       }
-      return target.trim();
+      return target;
     };
 
     let result: any;
