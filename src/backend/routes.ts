@@ -274,12 +274,13 @@ export async function registerRoutes(
       reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     };
 
+    let isStreamFinished = false;
     const handleClientClose = () => {
-      if (!reply.raw.writableEnded) {
+      if (!isStreamFinished && !reply.raw.writableEnded) {
         chatManager.stopSession(sessionId);
       }
     };
-    request.raw.on('close', handleClientClose);
+    reply.raw.on('close', handleClientClose);
 
     try {
       const response = await chatManager.sendMessage(message, sessionId, image, (event, data) => {
@@ -295,7 +296,8 @@ export async function registerRoutes(
         message: error instanceof Error ? error.message : 'Internal Server Error'
       });
     } finally {
-      request.raw.off('close', handleClientClose);
+      isStreamFinished = true;
+      reply.raw.off('close', handleClientClose);
       reply.raw.end();
     }
   });
