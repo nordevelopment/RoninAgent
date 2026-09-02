@@ -17,7 +17,7 @@ export const config = {
   AI_EMBEDDING_DIM: parseInt(process.env.AI_EMBEDDING_DIM || '4096'),
   AI_MAX_HISTORY_MESSAGES: process.env.AI_MAX_HISTORY_MESSAGES || 30,
   AI_TEMPERATURE: process.env.AI_TEMPERATURE || 0.2,
-  AI_MAX_TOKENS: process.env.AI_MAX_TOKENS || 24000,
+  AI_MAX_TOKENS: process.env.AI_MAX_TOKENS || 32000,
   AI_TIMEOUT: 180000,
   AI_MAX_FILE_READ_SIZE: parseInt(process.env.AI_MAX_FILE_READ_SIZE || '1048576'),
   AI_MAX_THINKING_STEPS: parseInt(process.env.AI_MAX_THINKING_STEPS || '30'),
