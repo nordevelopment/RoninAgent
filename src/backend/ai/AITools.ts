@@ -324,7 +324,8 @@ export class AITools {
           targetPath += '.pdf';
         }
         const pdfPath = this.fsManager.validatePath(targetPath);
-        await browserService.generatePdf(args.html as string, pdfPath);
+        const htmlContent = (args.html as string) || (args.content as string) || '';
+        await browserService.generatePdf(htmlContent, pdfPath);
         result = `PDF successfully generated and saved to ${targetPath}`;
         break;
       }

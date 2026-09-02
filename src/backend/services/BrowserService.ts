@@ -15,18 +15,20 @@ export class BrowserService {
    */
   private async getBrowser(): Promise<Browser> {
     if (!this.browser || !this.browser.connected) {
-      this.browser = await puppeteer.launch({
-        headless: 'shell',
-        args: [
-          '--headless',
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--disable-local-storage',
-          '--disable-file-system'
-        ]
-      });
+      try {
+        this.browser = await puppeteer.launch({
+          headless: true,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu'
+          ]
+        });
+      } catch (err) {
+        this.browser = null;
+        throw err;
+      }
     }
     return this.browser;
   }
