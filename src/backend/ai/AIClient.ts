@@ -220,7 +220,8 @@ export class AIClient {
     agentId?: string,
     tools?: any[],
     additionalSystem?: string,
-    skipSkills?: boolean
+    skipSkills?: boolean,
+    signal?: AbortSignal
   ): Promise<AIResponse> {
 
     const systemPrompt = this.buildSystemPrompt(agentId);
@@ -305,7 +306,6 @@ export class AIClient {
       messages: messagesWithSystem,
       temperature: config.AI_TEMPERATURE,
       max_tokens: config.AI_MAX_TOKENS,
-      top_p: config.AI_TOP_P,
     };
 
     // If tools are passed, add them to the request
@@ -324,7 +324,8 @@ export class AIClient {
             'Content-Type': 'application/json',
             'X-Title': 'RoninAgent'
           },
-          timeout: config.AI_TIMEOUT
+          timeout: config.AI_TIMEOUT,
+          signal
         }
       );
 
@@ -347,10 +348,15 @@ export class AIClient {
       };
 
     } catch (error: any) {
+      if (axios.isCancel(error) || error.name === 'CanceledError' || error.code === 'ERR_CANCELED' || signal?.aborted) {
+        return {
+          content: 'Error: Request was cancelled by user',
+        };
+      }
       if (axios.isAxiosError(error)) {
         console.error('AIClient: Axios Error ', error.response?.data);
         return {
-          content: 'Error: AI response ' + error.response?.data?.error.message + ' : ' + error.message,
+          content: 'Error: AI response ' + (error.response?.data?.error?.message || error.message),
         };
       } else {
         console.error('AIClient: Error ', error);

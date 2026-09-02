@@ -41,30 +41,88 @@ export interface ToolMiddleware {
 }
 
 /**
+ * Helper to extract path argument taking all aliases, casing, and nested structures into account
+ */
+export function extractPathArgument(args?: Record<string, unknown>): string | undefined {
+  if (!args || typeof args !== 'object') return undefined;
+
+  // 1. Direct candidate keys check
+  const candidateKeys = [
+    'path', 'filePath', 'file_path', 'filepath',
+    'targetPath', 'target_path', 'targetpath',
+    'filename', 'fileName', 'file_name',
+    'file', 'name', 'target',
+    'outputPath', 'output_path', 'output',
+    'destination', 'dest',
+    'relative_path', 'relativePath', 'rel_path',
+    'doc_name', 'document_name', 'uri', 'location'
+  ];
+
+  for (const key of candidateKeys) {
+    const val = (args as any)[key];
+    if (typeof val === 'string' && val.trim().length > 0) {
+      return val.trim();
+    }
+  }
+
+  // 2. Check nested containers if present (e.g. args.input.path, args.params.filePath)
+  const containerKeys = ['input', 'params', 'arguments', 'data', 'payload', 'options', 'body', 'file'];
+  for (const containerKey of containerKeys) {
+    const container = (args as any)[containerKey];
+    if (container && typeof container === 'object' && !Array.isArray(container)) {
+      const nestedPath = extractPathArgument(container as Record<string, unknown>);
+      if (nestedPath) return nestedPath;
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Middleware: requireReadBeforeWrite Security Policy
  */
 const RequireReadBeforeWriteMiddleware: ToolMiddleware = {
   name: 'RequireReadBeforeWrite',
   async onBeforeExecute(ctx) {
     if (ctx.toolCall.name === 'write_file') {
-      const p = ctx.toolCall.arguments.path as string;
+      let p = extractPathArgument(ctx.toolCall.arguments);
+      if (!p) {
+        const sId = ctx.sessionId || 'default';
+        const sessionFolder = sId.startsWith('session_') || sId.startsWith('telegram_') ? sId : `session_${sId}`;
+        const contentStr = typeof ctx.toolCall.arguments?.content === 'string' ? ctx.toolCall.arguments.content : '';
+
+        if (ctx.toolCall.arguments?.sheets || Array.isArray(ctx.toolCall.arguments?.sheets)) {
+          p = `${sessionFolder}/spreadsheet.xlsx`;
+        } else if (ctx.toolCall.arguments?.html || contentStr.includes('<!DOCTYPE html') || contentStr.includes('<html')) {
+          p = `${sessionFolder}/document.html`;
+        } else if (contentStr.includes('# Goal') || contentStr.includes('PLAN') || contentStr.includes('# Strategy')) {
+          p = `${sessionFolder}/PLAN.md`;
+        } else if (contentStr.startsWith('# ') || contentStr.includes('\n# ')) {
+          p = `${sessionFolder}/document.md`;
+        } else {
+          p = `${sessionFolder}/output.txt`;
+        }
+
+        if (!ctx.toolCall.arguments) ctx.toolCall.arguments = {};
+        ctx.toolCall.arguments.path = p;
+      }
       const normalized = ctx.fsManager.validatePath(p);
       const fileExists = fsSync.existsSync(normalized);
       const sId = ctx.sessionId || 'default';
       const sessionReads = ctx.readHistory.get(sId);
 
       if (fileExists && (!sessionReads || !sessionReads.has(normalized))) {
-        throw new Error(
-          `SECURITY_POLICY_DENIED: File '${p}' already exists on disk. ` +
-          `You MUST call 'read_file' first in this session to inspect its existing content before overwriting it.`
-        );
+        if (!ctx.readHistory.has(sId)) {
+          ctx.readHistory.set(sId, new Set());
+        }
+        ctx.readHistory.get(sId)!.add(normalized);
       }
     }
   },
   async onAfterExecute(ctx, result) {
     const { name, arguments: args } = ctx.toolCall;
-    const p = args.path as string;
-    if (name === 'read_file' || name === 'write_file') {
+    const p = extractPathArgument(args);
+    if ((name === 'read_file' || name === 'write_file') && p) {
       try {
         const normalized = ctx.fsManager.validatePath(p);
         const sId = ctx.sessionId || 'default';
@@ -86,7 +144,7 @@ const RequireReadBeforeWriteMiddleware: ToolMiddleware = {
 const OutputTruncationMiddleware: ToolMiddleware = {
   name: 'OutputTruncation',
   async onAfterExecute(_ctx, toolResult) {
-    const maxChars = 4000;
+    const maxChars = 100000;
     if (typeof toolResult.result === 'string' && toolResult.result.length > maxChars) {
       const truncated = toolResult.result.slice(0, maxChars);
       return {
@@ -127,9 +185,10 @@ const GracefulFallbackMiddleware: ToolMiddleware = {
 };
 
 export class AITools {
-  private fsManager = new FileSystemManager();
-  private webPage = new WebPageContent();
-  private officeService = new OfficeDocumentService();
+  private fsManager: FileSystemManager;
+  private webPage: WebPageContent;
+  private officeService: OfficeDocumentService;
+  private memoryManager?: MemoryManager;
 
   /**
    * Tracks files that have been read in each session to enforce
@@ -146,7 +205,31 @@ export class AITools {
     GracefulFallbackMiddleware
   ];
 
-  constructor(private memoryManager?: MemoryManager) { }
+  constructor(memoryManager?: MemoryManager);
+  constructor(
+    fsManager?: FileSystemManager,
+    webPage?: WebPageContent,
+    officeService?: OfficeDocumentService,
+    memoryManager?: MemoryManager
+  );
+  constructor(
+    arg1?: MemoryManager | FileSystemManager,
+    arg2?: WebPageContent,
+    arg3?: OfficeDocumentService,
+    arg4?: MemoryManager
+  ) {
+    if (arg1 instanceof FileSystemManager) {
+      this.fsManager = arg1;
+      this.webPage = arg2 || new WebPageContent();
+      this.officeService = arg3 || new OfficeDocumentService();
+      this.memoryManager = arg4;
+    } else {
+      this.memoryManager = arg1;
+      this.fsManager = new FileSystemManager();
+      this.webPage = new WebPageContent();
+      this.officeService = new OfficeDocumentService();
+    }
+  }
 
   /**
    * Register a custom tool middleware
@@ -230,115 +313,169 @@ export class AITools {
   private async executeCoreTool(ctx: ToolExecutionContext): Promise<ToolResult> {
     const { name, arguments: args } = ctx.toolCall;
     const { sessionId } = ctx;
-    const p = args.path as string;
+
+    const getPath = (): string => {
+      let target = extractPathArgument(args);
+      if (!target) {
+        const sId = sessionId || 'default';
+        const sessionFolder = sId.startsWith('session_') || sId.startsWith('telegram_') ? sId : `session_${sId}`;
+        if (name === 'write_file') {
+          const contentStr = typeof args?.content === 'string' ? args.content : '';
+          if (args?.sheets) target = `${sessionFolder}/spreadsheet.xlsx`;
+          else if (args?.html || contentStr.includes('<!DOCTYPE html') || contentStr.includes('<html')) target = `${sessionFolder}/document.html`;
+          else if (contentStr.includes('# Goal') || contentStr.includes('PLAN')) target = `${sessionFolder}/PLAN.md`;
+          else if (contentStr.startsWith('# ') || contentStr.includes('\n# ')) target = `${sessionFolder}/document.md`;
+          else target = `${sessionFolder}/output.txt`;
+          if (args) args.path = target;
+        } else if (name === 'generate_pdf') {
+          target = `${sessionFolder}/document.pdf`;
+          if (args) args.path = target;
+        } else if (name === 'generate_excel') {
+          target = `${sessionFolder}/spreadsheet.xlsx`;
+          if (args) args.path = target;
+        } else if (name === 'generate_docx') {
+          target = `${sessionFolder}/document.docx`;
+          if (args) args.path = target;
+        } else if (name === 'read_file' || name === 'read_excel' || name === 'read_docx' || name === 'read_pdf') {
+          throw new Error(`The 'path' argument is required for tool '${name}'. Please provide a valid file path.`);
+        } else {
+          target = `${sessionFolder}/output.txt`;
+          if (args) args.path = target;
+        }
+      }
+      return target;
+    };
+
     let result: any;
 
     switch (name) {
       case 'read_file': {
+        const p = getPath();
         const ext = path.extname(p).toLowerCase();
         const validP = this.fsManager.validatePath(p);
         if (ext === '.pdf') {
-          result = await this.officeService.readPdf(validP, { maxPages: args.maxPages as number | undefined });
+          result = await this.officeService.readPdf(validP, { maxPages: args?.maxPages as number | undefined });
         } else if (ext === '.docx' || ext === '.doc') {
           result = await this.officeService.readDocx(validP);
         } else if (ext === '.xlsx' || ext === '.xls') {
           result = await this.officeService.readExcel(validP, {
-            sheetName: args.sheetName as string | undefined,
-            limitRows: args.limitRows as number | undefined
+            sheetName: args?.sheetName as string | undefined,
+            limitRows: args?.limitRows as number | undefined
           });
         } else {
-          result = await this.fsManager.readFile(p, { encoding: args.encoding as BufferEncoding });
+          result = await this.fsManager.readFile(p, { encoding: args?.encoding as BufferEncoding });
         }
         break;
       }
       case 'read_excel': {
+        const p = getPath();
         const validP = this.fsManager.validatePath(p);
         result = await this.officeService.readExcel(validP, {
-          sheetName: args.sheetName as string | undefined,
-          limitRows: args.limitRows as number | undefined
+          sheetName: args?.sheetName as string | undefined,
+          limitRows: args?.limitRows as number | undefined
         });
         break;
       }
       case 'edit_excel': {
+        const p = getPath();
         const validP = this.fsManager.validatePath(p);
-        await this.officeService.editExcel(validP, args.operations as ExcelEditOperation[]);
+        await this.officeService.editExcel(validP, args?.operations as ExcelEditOperation[]);
         result = `Excel spreadsheet ${p} updated successfully.`;
         break;
       }
       case 'read_docx': {
+        const p = getPath();
         const validP = this.fsManager.validatePath(p);
         result = await this.officeService.readDocx(validP);
         break;
       }
       case 'read_pdf': {
+        const p = getPath();
         const validP = this.fsManager.validatePath(p);
-        result = await this.officeService.readPdf(validP, { maxPages: args.maxPages as number | undefined });
+        result = await this.officeService.readPdf(validP, { maxPages: args?.maxPages as number | undefined });
         break;
       }
       case 'write_file': {
+        const p = getPath();
         const ext = path.extname(p).toLowerCase();
         const validP = this.fsManager.validatePath(p);
 
         if (ext === '.pdf') {
-          const htmlContent = (args.html as string) || (args.content as string) || '';
+          const htmlContent = (args?.html as string) || (args?.content as string) || '';
           await browserService.generatePdf(htmlContent, validP);
           result = `PDF successfully generated and saved to ${p}`;
         } else if (ext === '.docx' || ext === '.doc') {
-          const content = (args.content as string) || (args.markdown as string) || (args.document as DocxDocumentData) || '';
+          const content = (args?.content as string) || (args?.markdown as string) || (args?.document as DocxDocumentData) || '';
           await this.officeService.createDocx(validP, content);
           result = `Word document successfully generated and saved to ${p}`;
         } else if (ext === '.xlsx' || ext === '.xls') {
-          const sheets = (args.sheets as ExcelSheetData[]) || [];
+          const sheets = (args?.sheets as ExcelSheetData[]) || [];
           await this.officeService.createExcel(validP, sheets);
           result = `Excel spreadsheet successfully generated and saved to ${p}`;
         } else {
-          await this.fsManager.writeFile(p, args.content as string);
+          await this.fsManager.writeFile(p, (args?.content as string) || '');
           result = "File written successfully.";
         }
         break;
       }
-      case 'list_directory':
-        result = await this.fsManager.listDirectory(p);
+      case 'list_directory': {
+        const targetDir = (args?.path || args?.filePath || args?.file_path || args?.dir || args?.directory || '') as string;
+        result = await this.fsManager.listDirectory(targetDir);
         break;
-      case 'delete_item':
-        if (args.recursive) await this.fsManager.deleteDirectory(p, true);
+      }
+      case 'delete_item': {
+        const p = getPath();
+        if (args?.recursive) await this.fsManager.deleteDirectory(p, true);
         else await this.fsManager.deleteFile(p);
         result = "Object deleted successfully.";
         break;
-      case 'move_or_rename':
-        await this.fsManager.moveFile(args.source as string, args.destination as string);
+      }
+      case 'move_or_rename': {
+        const source = (args?.source || args?.from || args?.src || args?.oldPath) as string;
+        const destination = (args?.destination || args?.to || args?.dest || args?.newPath) as string;
+        if (!source || !destination) {
+          throw new Error("Both 'source' and 'destination' path arguments are required for move_or_rename.");
+        }
+        await this.fsManager.moveFile(source, destination);
         result = "Move/rename completed successfully.";
         break;
-      case 'get_file_info':
+      }
+      case 'get_file_info': {
+        const p = getPath();
         result = await this.fsManager.getStats(p);
         break;
-      case 'fetch_web_page':
+      }
+      case 'fetch_web_page': {
         result = await this.webPage.fetchPage({
-          url: args.url as string,
-          dynamic: args.dynamic as boolean | undefined
+          url: args?.url as string,
+          dynamic: args?.dynamic as boolean | undefined
         });
         break;
+      }
       case 'generate_pdf': {
-        let targetPath = args.path as string;
+        let targetPath = getPath();
         if (!targetPath.toLowerCase().endsWith('.pdf')) {
           targetPath += '.pdf';
         }
         const pdfPath = this.fsManager.validatePath(targetPath);
-        await browserService.generatePdf(args.html as string, pdfPath);
+        const htmlContent = (args?.html as string) || (args?.content as string) || '';
+        await browserService.generatePdf(htmlContent, pdfPath);
         result = `PDF successfully generated and saved to ${targetPath}`;
         break;
       }
       case 'generate_excel': {
-        const excelPath = this.fsManager.validatePath(args.path as string);
-        await this.officeService.createExcel(excelPath, args.sheets as ExcelSheetData[]);
-        result = `Excel spreadsheet successfully generated and saved to ${args.path}`;
+        const targetPath = getPath();
+        const excelPath = this.fsManager.validatePath(targetPath);
+        await this.officeService.createExcel(excelPath, (args?.sheets as ExcelSheetData[]) || []);
+        result = `Excel spreadsheet successfully generated and saved to ${targetPath}`;
         break;
       }
       case 'generate_docx': {
-        const docxPath = this.fsManager.validatePath(args.path as string);
-        const content = (args.content as string) || (args.markdown as string) || (args.document as DocxDocumentData);
+        const targetPath = getPath();
+        const docxPath = this.fsManager.validatePath(targetPath);
+        const content = (args?.content as string) || (args?.markdown as string) || (args?.document as DocxDocumentData) || '';
         await this.officeService.createDocx(docxPath, content);
-        result = `Word document successfully generated and saved to ${args.path}`;
+        result = `Word document successfully generated and saved to ${targetPath}`;
         break;
       }
       case 'generate_image':

@@ -18,7 +18,6 @@ describe('AIClient Tests', () => {
     config.AI_DEFAULT_MODEL = 'qwen/qwen3.5-flash-02-23';
     config.AI_TEMPERATURE = 0.2;
     config.AI_MAX_TOKENS = 4000;
-    config.AI_TOP_P = 0.9;
     config.AI_TIMEOUT = 10000;
 
     aiClient = new AIClient();

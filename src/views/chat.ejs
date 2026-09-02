@@ -49,6 +49,9 @@
                         <div class="typing-dot"></div>
                     </div>
                     <span class="typing-text">AI IS THINKING...</span>
+                    <button id="typingStopButton" class="cyber-btn cyber-btn--red typing-stop-btn" title="STOP AI GENERATION" type="button">
+                        ⏹ STOP
+                    </button>
                 </div>
 
                 <!-- Drop Zone Overlay for Drag & Drop -->
@@ -94,6 +97,12 @@
                             style="padding: 8px 12px; display: flex; align-items: center; justify-content: center;">
                             <svg class="send-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
                                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                            </svg>
+                        </button>
+                        <button id="stopButton" class="cyber-btn cyber-btn--red cyber-btn--stop" title="STOP AI GENERATION"
+                            style="display: none; padding: 8px 12px; align-items: center; justify-content: center;">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                                <rect x="5" y="5" width="14" height="14" rx="2" ry="2" />
                             </svg>
                         </button>
                     </div>

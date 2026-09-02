@@ -274,6 +274,14 @@ export async function registerRoutes(
       reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     };
 
+    let isStreamFinished = false;
+    const handleClientClose = () => {
+      if (!isStreamFinished && !reply.raw.writableEnded) {
+        chatManager.stopSession(sessionId);
+      }
+    };
+    reply.raw.on('close', handleClientClose);
+
     try {
       const response = await chatManager.sendMessage(message, sessionId, image, (event, data) => {
         sendEvent(event, data);
@@ -288,8 +296,21 @@ export async function registerRoutes(
         message: error instanceof Error ? error.message : 'Internal Server Error'
       });
     } finally {
+      isStreamFinished = true;
+      reply.raw.off('close', handleClientClose);
       reply.raw.end();
     }
+  });
+
+  // Stop active AI chat generation
+  app.post('/api/chat/stop', async (request: FastifyRequest<{ Body: { sessionId?: string } }>, reply: FastifyReply) => {
+    const sessionId = request.body?.sessionId || request.sessionId;
+    const stopped = chatManager.stopSession(sessionId);
+    return reply.send({
+      success: true,
+      stopped,
+      message: stopped ? 'AI generation stopped successfully.' : 'No active generation found for session.'
+    });
   });
 
   app.get('/api/sessions', async (_request, _reply) => {
