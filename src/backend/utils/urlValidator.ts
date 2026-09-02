@@ -1,6 +1,6 @@
 /**
  * urlValidator.ts - Security utility for validating external URLs and preventing SSRF
- * Author: Antigravity AI
+ * Author: Norayr Petrosyan
  */
 
 import dns from 'dns';

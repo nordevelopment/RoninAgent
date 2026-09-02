@@ -16,6 +16,9 @@
 
 RoninAgent is a high-speed, zero-bloat open-source personal AI agent built for absolute privacy, local execution, and total autonomy. Designed as an ultra-lightweight alternative to resource-heavy frameworks, it drops complex abstractions like LangChain in favor of pure TypeScript performance, sub-second cold starts, and complete data sovereignty.
 
+> [!TIP]
+> **🌍 Built for markets Western agents can't read.** Out of the box RoninAgent understands **Wildberries**, **Ozon**, **List.am** (Armenia), **Temu** and **Amazon** — each skill carries that marketplace's real URL structure, price-sorting parameters and parsing rules, so the agent can actually pull and compare live listings. Trigger keywords are bilingual (`wildberries` / `вайлдберриз`, `ozon` / `озон`, `list.am` / `лист ам`), so you can ask in English or Russian.
+
 ---
 
 ## ⚡Features
@@ -23,7 +26,7 @@ RoninAgent is a high-speed, zero-bloat open-source personal AI agent built for a
 *   **🤖 Multi-Agent Hub**: Dedicated in-app **Agents Hub** manager to create, edit, switch, and delete custom AI agents. Easily tweak persona files (`Agent.md`, `Identity.md`, `User.md`, `Memory.md`) and tailor prompt instructions for each specialized agent.
 *   **🧠 Modular System Prompt**: The agent's personality and instructions are compiled dynamically from simple Markdown files (`Agent.md`, `Identity.md`, `User.md`, `Memory.md`).
 *   **⚡ Dynamic Agent Skills**: Save LLM context tokens by loading specialized prompt instructions conditionally. Shared skills live in `skills/*.md` (with optional agent-specific overrides in `agents/<agentId>/skills/*.md`). When a query matches header keywords (e.g., `Keywords: amazon, wildberries, temu, code`), instructions are dynamically injected into the system prompt. Comes with pre-built skills for:
-    *   **🛒 E-commerce & Local Search**: Specialized URL structures, price sorting, and parsing rules for **Amazon**, **Wildberries**, **Ozon**, **Temu**, and **List.am**.
+    *   **🛒 Regional E-commerce & Local Search**: Marketplace-specific URL structures, price sorting, and parsing rules for **Wildberries**, **Ozon**, **List.am** (Armenia), **Temu**, and **Amazon** — with bilingual EN/RU trigger keywords.
     *   **💻 Software Engineering**: Refactoring, debugging, and strict code style instructions.
     *   **🎨 Content Writing & Design**: Copywriting, UI/UX guidelines, and image generation prompt optimization.
 *   **👁️ AI Vision & Document Analysis**: Attach images or upload documents directly in the chat. Features auto-optimization for images via `sharp` and native parsing for documents (**PDF**, **Word**, **Excel**, **Text/CSV/JSON**).
@@ -117,7 +120,21 @@ npm run build
 
 RoninAgent includes built-in security features to protect your server, files, and API balances when deployed remotely. **These security settings can be easily configured either during the first-launch setup wizard, or later at any time via the Web Settings Panel (`/settings` page in the UI).**
 
-*   **HTTP Basic Auth**: Lock the Web UI and API endpoints behind a password. Set `APP_PASSWORD` (and optionally `APP_USER`) in your `.env` (or via Settings UI) to enable it. Leaving `APP_PASSWORD` empty disables authentication (ideal for local localhost use).
+> [!WARNING]
+> **Never expose port 3000 directly to the internet.** HTTP Basic Auth sends your password in plain text — over an unencrypted connection anyone on the path can read it. For remote access, put RoninAgent behind a TLS reverse proxy, or reach it over a private network (Tailscale / WireGuard).
+>
+> A complete `Caddyfile` — Caddy obtains and renews the certificate automatically:
+>
+> ```caddyfile
+> agent.example.com {
+>     reverse_proxy 127.0.0.1:3000
+> }
+> ```
+>
+> Keep `HOST=127.0.0.1` so only the proxy can reach the app, and set a strong `APP_PASSWORD`.
+
+*   **HTTP Basic Auth**: Lock the Web UI and API endpoints behind a password. Set `APP_PASSWORD` (and optionally `APP_USER`) in your `.env` (or via Settings UI) to enable it. Leaving `APP_PASSWORD` empty disables authentication (ideal for local localhost use); if you do that while binding to a non-loopback `HOST`, a warning is logged at startup.
+*   **Brute-Force Protection**: Credentials are compared in constant time, and **5 failed attempts** from the same IP lock that IP out for 60 seconds (`429` with a `Retry-After` header). Only *failures* are counted, so a legitimate session is never throttled.
 *   **Telegram Bot Whitelist**: Restrict access to your Telegram bot. Set `ALLOWED_TELEGRAM_USER_IDS` in your `.env` (or via Settings UI) with a comma-separated list of Telegram User IDs to prevent unauthorized users from using your bot and API balances.
 *   **Strict Path Validation**: All AI file operations (read, write, delete) are strictly validated using `path.relative` comparison to ensure the AI cannot escape or access files outside the designated `workspace/` folder.
 *   **Safe Agent Directory Routing**: Directory operations on agent profiles (like editing files) sanitize all incoming IDs to prevent Path Traversal outside the `agents/` folder.

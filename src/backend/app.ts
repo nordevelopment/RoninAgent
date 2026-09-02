@@ -24,6 +24,8 @@ import { TelegramBot } from './services/TelegramBot.js';
 import { TaskService } from './services/TaskService.js';
 import { SettingsService } from './services/SettingsService.js';
 import { FileSystemManager } from './services/FileSystemManager.js';
+import { LoginLimiter } from './utils/loginLimiter.js';
+import logger from './utils/logger.js';
 
 // Augment Fastify types to support sessionId
 declare module 'fastify' {
@@ -38,6 +40,27 @@ declare module 'fastify' {
 function getCookieSecret(): string {
   const secret = process.env.JWT_SECRET || process.env.SESSION_SECRET;
   return secret || 'default-secret-key-for-development-only-32chars!!';
+}
+
+/**
+ * Constant-time string comparison. Both sides are hashed first so that
+ * differing lengths cannot leak through timingSafeEqual's length check.
+ */
+function safeEquals(actual: string, expected: string): boolean {
+  const a = crypto.createHash('sha256').update(String(actual)).digest();
+  const b = crypto.createHash('sha256').update(String(expected)).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+/**
+ * Whether the configured bind address only accepts local connections
+ */
+function isLoopbackHost(host: string): boolean {
+  const normalized = String(host || '').trim().toLowerCase().replace(/^\[|\]$/g, '');
+  return normalized === '127.0.0.1'
+    || normalized === 'localhost'
+    || normalized === '::1'
+    || normalized.startsWith('127.');
 }
 
 /**
@@ -73,12 +96,27 @@ export async function buildApp(): Promise<FastifyInstance> {
 
     // Basic Auth Setup
     if (config.APP_PASSWORD) {
+      const loginLimiter = new LoginLimiter({ maxAttempts: 5, windowMs: 60_000 });
+
       await app.register(basicAuth, {
-        validate: async (username, password, _request, _reply) => {
+        validate: async (username, password, request, _reply) => {
+          const ip = request.ip || 'unknown';
+
+          if (loginLimiter.isLocked(ip)) {
+            request.log.warn({ ip }, '[Auth] Rejected: IP temporarily locked after repeated failures');
+            throw new Error('Too many failed attempts');
+          }
+
           const expectedUser = config.APP_USER || 'admin';
-          if (username !== expectedUser || password !== config.APP_PASSWORD) {
+          const ok = safeEquals(username, expectedUser) && safeEquals(password, config.APP_PASSWORD);
+
+          if (!ok) {
+            const failures = loginLimiter.recordFailure(ip);
+            request.log.warn({ ip, failures }, '[Auth] Failed authentication attempt');
             throw new Error('Unauthorized');
           }
+
+          loginLimiter.reset(ip);
         },
         authenticate: true
       });
@@ -90,6 +128,15 @@ export async function buildApp(): Promise<FastifyInstance> {
         }
         app.basicAuth(request, reply, (err) => {
           if (err) {
+            const retryAfter = loginLimiter.retryAfterSeconds(request.ip || 'unknown');
+            if (retryAfter > 0 && loginLimiter.isLocked(request.ip || 'unknown')) {
+              reply.header('Retry-After', String(retryAfter));
+              reply.status(429).send({
+                success: false,
+                message: `Too many failed attempts. Try again in ${retryAfter}s.`
+              });
+              return;
+            }
             request.log.error({ err }, 'BasicAuth auth error');
             reply.status(401).send({ success: false, message: 'Unauthorized' });
             return;
@@ -97,6 +144,12 @@ export async function buildApp(): Promise<FastifyInstance> {
           next();
         });
       });
+    } else if (!isLoopbackHost(config.HOST)) {
+      logger.warn(
+        { host: config.HOST },
+        '[Security] APP_PASSWORD is empty while the server binds to a non-loopback address. ' +
+        'The Web UI and API are reachable without authentication. Set APP_PASSWORD, or bind HOST to 127.0.0.1.'
+      );
     }
 
     // Create chat components
