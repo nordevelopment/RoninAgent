@@ -63,8 +63,8 @@ const RequireReadBeforeWriteMiddleware: ToolMiddleware = {
   },
   async onAfterExecute(ctx, result) {
     const { name, arguments: args } = ctx.toolCall;
-    const p = args.path as string;
-    if (name === 'read_file' || name === 'write_file') {
+    const p = (args?.path || args?.filePath || args?.file_path || args?.targetPath || args?.filename || args?.file) as string;
+    if ((name === 'read_file' || name === 'write_file') && p && typeof p === 'string') {
       try {
         const normalized = ctx.fsManager.validatePath(p);
         const sId = ctx.sessionId || 'default';
@@ -86,7 +86,7 @@ const RequireReadBeforeWriteMiddleware: ToolMiddleware = {
 const OutputTruncationMiddleware: ToolMiddleware = {
   name: 'OutputTruncation',
   async onAfterExecute(_ctx, toolResult) {
-    const maxChars = 4000;
+    const maxChars = 100000;
     if (typeof toolResult.result === 'string' && toolResult.result.length > maxChars) {
       const truncated = toolResult.result.slice(0, maxChars);
       return {
@@ -230,116 +230,145 @@ export class AITools {
   private async executeCoreTool(ctx: ToolExecutionContext): Promise<ToolResult> {
     const { name, arguments: args } = ctx.toolCall;
     const { sessionId } = ctx;
-    const p = args.path as string;
+
+    const getPath = (): string => {
+      const target = (args?.path || args?.filePath || args?.file_path || args?.filepath || args?.targetPath || args?.target_path || args?.filename || args?.file) as string;
+      if (!target || typeof target !== 'string' || !target.trim()) {
+        throw new Error(`The 'path' argument is required for tool '${name}'. Please provide a valid file path.`);
+      }
+      return target.trim();
+    };
+
     let result: any;
 
     switch (name) {
       case 'read_file': {
+        const p = getPath();
         const ext = path.extname(p).toLowerCase();
         const validP = this.fsManager.validatePath(p);
         if (ext === '.pdf') {
-          result = await this.officeService.readPdf(validP, { maxPages: args.maxPages as number | undefined });
+          result = await this.officeService.readPdf(validP, { maxPages: args?.maxPages as number | undefined });
         } else if (ext === '.docx' || ext === '.doc') {
           result = await this.officeService.readDocx(validP);
         } else if (ext === '.xlsx' || ext === '.xls') {
           result = await this.officeService.readExcel(validP, {
-            sheetName: args.sheetName as string | undefined,
-            limitRows: args.limitRows as number | undefined
+            sheetName: args?.sheetName as string | undefined,
+            limitRows: args?.limitRows as number | undefined
           });
         } else {
-          result = await this.fsManager.readFile(p, { encoding: args.encoding as BufferEncoding });
+          result = await this.fsManager.readFile(p, { encoding: args?.encoding as BufferEncoding });
         }
         break;
       }
       case 'read_excel': {
+        const p = getPath();
         const validP = this.fsManager.validatePath(p);
         result = await this.officeService.readExcel(validP, {
-          sheetName: args.sheetName as string | undefined,
-          limitRows: args.limitRows as number | undefined
+          sheetName: args?.sheetName as string | undefined,
+          limitRows: args?.limitRows as number | undefined
         });
         break;
       }
       case 'edit_excel': {
+        const p = getPath();
         const validP = this.fsManager.validatePath(p);
-        await this.officeService.editExcel(validP, args.operations as ExcelEditOperation[]);
+        await this.officeService.editExcel(validP, args?.operations as ExcelEditOperation[]);
         result = `Excel spreadsheet ${p} updated successfully.`;
         break;
       }
       case 'read_docx': {
+        const p = getPath();
         const validP = this.fsManager.validatePath(p);
         result = await this.officeService.readDocx(validP);
         break;
       }
       case 'read_pdf': {
+        const p = getPath();
         const validP = this.fsManager.validatePath(p);
-        result = await this.officeService.readPdf(validP, { maxPages: args.maxPages as number | undefined });
+        result = await this.officeService.readPdf(validP, { maxPages: args?.maxPages as number | undefined });
         break;
       }
       case 'write_file': {
+        const p = getPath();
         const ext = path.extname(p).toLowerCase();
         const validP = this.fsManager.validatePath(p);
 
         if (ext === '.pdf') {
-          const htmlContent = (args.html as string) || (args.content as string) || '';
+          const htmlContent = (args?.html as string) || (args?.content as string) || '';
           await browserService.generatePdf(htmlContent, validP);
           result = `PDF successfully generated and saved to ${p}`;
         } else if (ext === '.docx' || ext === '.doc') {
-          const content = (args.content as string) || (args.markdown as string) || (args.document as DocxDocumentData) || '';
+          const content = (args?.content as string) || (args?.markdown as string) || (args?.document as DocxDocumentData) || '';
           await this.officeService.createDocx(validP, content);
           result = `Word document successfully generated and saved to ${p}`;
         } else if (ext === '.xlsx' || ext === '.xls') {
-          const sheets = (args.sheets as ExcelSheetData[]) || [];
+          const sheets = (args?.sheets as ExcelSheetData[]) || [];
           await this.officeService.createExcel(validP, sheets);
           result = `Excel spreadsheet successfully generated and saved to ${p}`;
         } else {
-          await this.fsManager.writeFile(p, args.content as string);
+          await this.fsManager.writeFile(p, (args?.content as string) || '');
           result = "File written successfully.";
         }
         break;
       }
-      case 'list_directory':
-        result = await this.fsManager.listDirectory(p);
+      case 'list_directory': {
+        const targetDir = (args?.path || args?.filePath || args?.file_path || args?.dir || args?.directory || '') as string;
+        result = await this.fsManager.listDirectory(targetDir);
         break;
-      case 'delete_item':
-        if (args.recursive) await this.fsManager.deleteDirectory(p, true);
+      }
+      case 'delete_item': {
+        const p = getPath();
+        if (args?.recursive) await this.fsManager.deleteDirectory(p, true);
         else await this.fsManager.deleteFile(p);
         result = "Object deleted successfully.";
         break;
-      case 'move_or_rename':
-        await this.fsManager.moveFile(args.source as string, args.destination as string);
+      }
+      case 'move_or_rename': {
+        const source = (args?.source || args?.from || args?.src || args?.oldPath) as string;
+        const destination = (args?.destination || args?.to || args?.dest || args?.newPath) as string;
+        if (!source || !destination) {
+          throw new Error("Both 'source' and 'destination' path arguments are required for move_or_rename.");
+        }
+        await this.fsManager.moveFile(source, destination);
         result = "Move/rename completed successfully.";
         break;
-      case 'get_file_info':
+      }
+      case 'get_file_info': {
+        const p = getPath();
         result = await this.fsManager.getStats(p);
         break;
-      case 'fetch_web_page':
+      }
+      case 'fetch_web_page': {
         result = await this.webPage.fetchPage({
-          url: args.url as string,
-          dynamic: args.dynamic as boolean | undefined
+          url: args?.url as string,
+          dynamic: args?.dynamic as boolean | undefined
         });
         break;
+      }
       case 'generate_pdf': {
-        let targetPath = args.path as string;
+        let targetPath = getPath();
         if (!targetPath.toLowerCase().endsWith('.pdf')) {
           targetPath += '.pdf';
         }
         const pdfPath = this.fsManager.validatePath(targetPath);
-        const htmlContent = (args.html as string) || (args.content as string) || '';
+        const htmlContent = (args?.html as string) || (args?.content as string) || '';
         await browserService.generatePdf(htmlContent, pdfPath);
         result = `PDF successfully generated and saved to ${targetPath}`;
         break;
       }
       case 'generate_excel': {
-        const excelPath = this.fsManager.validatePath(args.path as string);
-        await this.officeService.createExcel(excelPath, args.sheets as ExcelSheetData[]);
-        result = `Excel spreadsheet successfully generated and saved to ${args.path}`;
+        const targetPath = getPath();
+        const excelPath = this.fsManager.validatePath(targetPath);
+        await this.officeService.createExcel(excelPath, (args?.sheets as ExcelSheetData[]) || []);
+        result = `Excel spreadsheet successfully generated and saved to ${targetPath}`;
         break;
       }
       case 'generate_docx': {
-        const docxPath = this.fsManager.validatePath(args.path as string);
-        const content = (args.content as string) || (args.markdown as string) || (args.document as DocxDocumentData);
+        const targetPath = getPath();
+        const docxPath = this.fsManager.validatePath(targetPath);
+        const content = (args?.content as string) || (args?.markdown as string) || (args?.document as DocxDocumentData) || '';
         await this.officeService.createDocx(docxPath, content);
-        result = `Word document successfully generated and saved to ${args.path}`;
+        result = `Word document successfully generated and saved to ${targetPath}`;
         break;
       }
       case 'generate_image':

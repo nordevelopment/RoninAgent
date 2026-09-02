@@ -75,23 +75,32 @@ export class ChatManager {
           }
           repaired += '}';
         }
-        return JSON.parse(repaired);
+        const parsed = JSON.parse(repaired);
+        if (!parsed.path && !parsed.filePath && !parsed.file_path && !parsed.targetPath && !parsed.filename) {
+          const pathMatch = rawArgs.match(/"(?:path|filePath|file_path|targetPath|filename|file)"\s*:\s*"([^"]+)"/);
+          if (pathMatch) {
+            parsed.path = pathMatch[1];
+          }
+        }
+        return parsed;
       } catch {}
 
-      // Attempt 3: Regex extraction for write_file / read_file
-      if (toolName === 'write_file' || rawArgs.includes('"path"')) {
-        const pathMatch = rawArgs.match(/"path"\s*:\s*"([^"]+)"/);
-        const contentMatch = rawArgs.match(/"content"\s*:\s*"([\s\S]*)/);
-        if (pathMatch) {
-          let content = '';
-          if (contentMatch) {
-            content = contentMatch[1];
-            content = content.replace(/"\s*}?\s*$/, '');
-            content = content.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t');
-          }
+      // Attempt 3: Regex extraction for write_file / generate_pdf / read_file
+      if (toolName === 'write_file' || toolName === 'generate_pdf' || toolName === 'generate_docx' || rawArgs.includes('"content"') || rawArgs.includes('"path"')) {
+        const pathMatch = rawArgs.match(/"(?:path|filePath|file_path|targetPath|filename|file)"\s*:\s*"([^"]+)"/);
+        const contentMatch = rawArgs.match(/"(?:content|html|markdown)"\s*:\s*"([\s\S]*)/);
+        const pathVal = pathMatch ? pathMatch[1] : undefined;
+        let contentVal = '';
+        if (contentMatch) {
+          contentVal = contentMatch[1];
+          contentVal = contentVal.replace(/"\s*}?\s*$/, '');
+          contentVal = contentVal.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '\r');
+        }
+        if (pathVal || contentVal) {
           return {
-            path: pathMatch[1],
-            content
+            path: pathVal,
+            content: contentVal,
+            html: contentVal
           };
         }
       }

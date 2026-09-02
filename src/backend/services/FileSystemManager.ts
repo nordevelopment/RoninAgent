@@ -74,6 +74,9 @@ export class FileSystemManager {
    * Проверить, что путь находится в разрешённой директории
    */
   public validatePath(targetPath: string): string {
+    if (!targetPath || typeof targetPath !== 'string' || !targetPath.trim()) {
+      throw new Error("Invalid path parameter: path must be a non-empty string.");
+    }
     let normalizedPath = path.normalize(targetPath);
 
     // Если путь относительный, конвертируем в абсолютный относительно первого allowedRoot
