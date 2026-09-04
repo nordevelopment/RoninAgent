@@ -144,38 +144,105 @@ export class AIClient {
         const lines = content.split(/\r?\n/);
         if (lines.length === 0) continue;
 
-        const firstLine = lines[0].trim();
         let keywords: string[] = [];
-        let body = '';
+        let phrases: string[] = [];
+        let combinations: Array<{ actions: string[]; targets: string[] }> = [];
+        let excludePhrases: string[] = [];
+        let bodyStartIndex = 0;
 
-        if (firstLine.toLowerCase().startsWith('keywords:')) {
-          keywords = firstLine
-            .substring(9)
-            .split(',')
-            .map(k => k.trim().toLowerCase())
-            .filter(k => k.length > 0);
-          body = lines.slice(1).join('\n').trim();
-        } else {
-          // Fallback: use filename without extension as keyword
-          const filenameKeyword = filenameKey.replace(/\.md$/, '');
-          keywords = [filenameKeyword];
-          body = content.trim();
+        // Parse header metadata directives at the top of the file
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) {
+            bodyStartIndex = i + 1;
+            break;
+          }
+
+          const lineLower = line.toLowerCase();
+          if (lineLower.startsWith('keywords:')) {
+            const parsed = line.substring(9).split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+            keywords.push(...parsed);
+            bodyStartIndex = i + 1;
+          } else if (lineLower.startsWith('phrases:') || lineLower.startsWith('phrase:')) {
+            const colonIdx = line.indexOf(':');
+            const parsed = line.substring(colonIdx + 1).split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
+            phrases.push(...parsed);
+            bodyStartIndex = i + 1;
+          } else if (lineLower.startsWith('combinations:') || lineLower.startsWith('combination:')) {
+            const colonIdx = line.indexOf(':');
+            const combStr = line.substring(colonIdx + 1).trim();
+            const parts = combStr.split('|');
+            if (parts.length >= 2) {
+              const actions = parts[0].split(',').map(a => a.trim().toLowerCase()).filter(Boolean);
+              const targets = parts[1].split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+              if (actions.length > 0 && targets.length > 0) {
+                combinations.push({ actions, targets });
+              }
+            }
+            bodyStartIndex = i + 1;
+          } else if (lineLower.startsWith('exclude:') || lineLower.startsWith('excludes:')) {
+            const colonIdx = line.indexOf(':');
+            const parsed = line.substring(colonIdx + 1).split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+            excludePhrases.push(...parsed);
+            bodyStartIndex = i + 1;
+          } else {
+            // Non-header line reached
+            bodyStartIndex = i;
+            break;
+          }
         }
 
-        const isMatched = keywords.some(keyword => {
-          if (!keyword) return false;
-          const escaped = keyword.replace(/[\/\\^$*+?.()|[\]{}]/g, '\\$&');
-          // Match whole word using Unicode property escapes (not preceded or followed by any letter)
+        const body = lines.slice(bodyStartIndex).join('\n').trim();
+
+        // Fallback if no directives were specified
+        if (keywords.length === 0 && phrases.length === 0 && combinations.length === 0) {
+          const filenameKeyword = filenameKey.replace(/\.md$/, '');
+          keywords = [filenameKeyword];
+        }
+
+        // 1. Check exclusions first (immediate suppression)
+        const isExcluded = excludePhrases.some(ex => {
+          if (!ex) return false;
+          return queryLower.includes(ex);
+        });
+
+        if (isExcluded) {
+          continue;
+        }
+
+        const testWordBoundary = (word: string): boolean => {
+          if (!word) return false;
+          const escaped = word.replace(/[\/\\^$*+?.()|[\]{}]/g, '\\$&');
           const regex = new RegExp(`(?<!\\p{L})${escaped}(?!\\p{L})`, 'gu');
           return regex.test(queryLower);
+        };
+
+        // 2. Check exact phrases
+        let isMatched = phrases.some(phrase => {
+          if (!phrase) return false;
+          return queryLower.includes(phrase);
         });
+
+        // 3. Check combinations (Action + Target requirement)
+        if (!isMatched && combinations.length > 0) {
+          isMatched = combinations.some(({ actions, targets }) => {
+            const hasAction = actions.some(act => testWordBoundary(act) || queryLower.includes(act));
+            const hasTarget = targets.some(tgt => testWordBoundary(tgt) || queryLower.includes(tgt));
+            return hasAction && hasTarget;
+          });
+        }
+
+        // 4. Check keywords with whole-word boundary
+        if (!isMatched && keywords.length > 0) {
+          isMatched = keywords.some(keyword => testWordBoundary(keyword));
+        }
 
         if (isMatched) {
           const rawBasename = path.basename(filePath, '.md');
           const skillName = rawBasename.toUpperCase();
           matchedSkills.push({
             name: skillName,
-            body,
+            body: body || content.trim(),
             filename: path.basename(filePath),
             isLocal,
           });

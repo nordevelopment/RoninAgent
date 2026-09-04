@@ -54,7 +54,7 @@
   /* Typography Colors */
   --text-main: #f0fdfa;
   /* Crisp Sea-Foam Pearl */
-  --text-body: #ccfbf1;
+  --text-body: #e2f3f4;
   /* Soft Aquamarine White */
   --text-muted: #94a3b8;
   /* Slate / Muted Cyan */
@@ -299,7 +299,7 @@ body {
   width: 100%;
   padding: 10px 14px;
   border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, #0d9488 0%, #06b6d4 100%);
+  background: linear-gradient(135deg, #097e84 0%, #0d8ba0 100%);
   border: 1px solid rgba(45, 212, 191, 0.35);
   color: #ffffff;
   font-size: 13px;
@@ -333,7 +333,7 @@ body {
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   color: var(--text-body);
-  font-size: 13px;
+  font-size: 1.2rem;
   font-weight: 500;
   background: transparent;
   border: 1px solid transparent;
@@ -473,7 +473,7 @@ body {
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-muted);
-  font-size: 12.5px;
+  font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-fast);

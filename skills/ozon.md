@@ -1,4 +1,6 @@
-Keywords: ozon, озон, купить на озон, товары ozon, ozon.ru, ozon.am, am.ozon.com
+Phrases: на озоне, в озоне, на ozon, товары на озон, купить на озон, поиск на озон, цены на озоне, ozon.ru, ozon.am, am.ozon.com
+Combinations: найди, сравни, покажи, поищи, закажи, купи | озон, озоне, ozon
+Keywords: ozon.ru, ozon.am, am.ozon.com
 
 When searching or analyzing products on Ozon:
 

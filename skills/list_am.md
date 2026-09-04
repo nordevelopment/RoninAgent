@@ -1,4 +1,6 @@
-Keywords: list.am, лист ам, листам, list am, объявления армения, товары list.am, купить на list.am
+Phrases: на листам, на лист ам, на list.am, на list am, объявления list.am, товары на list.am, купить на list.am, поиск на list.am, list.am
+Combinations: найди, сравни, покажи, поищи, закажи, купи | листам, list.am, list am
+Keywords: list.am
 
 When searching or analyzing classifieds and products on List.am (Armenia):
 

@@ -1,4 +1,6 @@
-Keywords: meme, memes, image meme, funny picture, mem, mems, мем, мемы, мемасик, смешная картинка, прикол
+Phrases: создай мем, сделай мем, нарисуй мем, придумай мем, смешной мем, make a meme, create a meme, generate meme
+Combinations: создай, придумай, сделай, нарисуй, сгенерируй | мем, мемы, мемасик, meme, memes
+Keywords: meme_creator
 
 When asked to write, create, suggest, or generate a meme (мем):
 1. **Never put text on the image**: When calling the `generate_image` tool, describe a clean, high-quality, textless visual scene (e.g., add "textless", "no text", "no labels", "clean image" to the prompt). Image generators struggle to write legible text, so keep the generated picture text-free.
