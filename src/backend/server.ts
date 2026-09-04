@@ -18,7 +18,7 @@ async function start() {
     const port = config.PORT;
     const host = config.HOST;
     await app.listen({ port: Number(port), host });
-    // app.log.info(`Server running at http://${host}:${port}`);
+    console.log(`\x1b[32m[BACKEND READY]\x1b[0m Server running at http://${host}:${port}`);
 
     // Graceful shutdown
     const gracefulShutdown = async (signal: string) => {
@@ -40,6 +40,7 @@ async function start() {
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
   } catch (err) {
+    console.error('[BACKEND FATAL ERROR]', err);
     logger.error({ err }, 'Failed to start server');
     process.exit(1);
   }

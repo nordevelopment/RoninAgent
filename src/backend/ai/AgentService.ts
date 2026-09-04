@@ -15,7 +15,7 @@ export class AgentService {
 
     constructor() {
         // Path to agents folder in project root
-        this.baseAgentsPath = path.join(__dirname, '../../../agents');
+        this.baseAgentsPath = path.resolve(process.cwd(), 'agents');
     }
 
     /**

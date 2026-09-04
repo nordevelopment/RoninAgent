@@ -1,4 +1,4 @@
-import Fastify, { FastifyInstance, LogController } from 'fastify';
+import Fastify, { FastifyInstance } from 'fastify';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
@@ -6,8 +6,7 @@ import basicAuth from '@fastify/basic-auth';
 import staticPlugin from '@fastify/static';
 import cookiePlugin from '@fastify/cookie';
 import multipartPlugin from '@fastify/multipart';
-import pointOfView from '@fastify/view';
-import ejs from 'ejs';
+
 
 import { config } from './config.js';
 import { DatabaseClient } from './database/DatabaseClient.js';
@@ -80,9 +79,7 @@ export async function buildApp(): Promise<FastifyInstance> {
         },
       } : undefined,
     },
-    logController: new LogController({
-      disableRequestLogging: true,
-    }),
+    disableRequestLogging: true,
     bodyLimit: 20971520, // 20MB
   });
 
@@ -243,16 +240,24 @@ export async function buildApp(): Promise<FastifyInstance> {
       decorateReply: false,
     });
 
+    const frontendDist = path.join(process.cwd(), 'frontend/dist');
+    const frontendDev = path.join(process.cwd(), 'frontend');
+    const staticRoot = fs.existsSync(frontendDist) ? frontendDist : frontendDev;
+
     await app.register(staticPlugin, {
-      root: path.join(process.cwd(), 'frontend'),
+      root: staticRoot,
       prefix: '/',
     });
 
-    await app.register(pointOfView, {
-      engine: {
-        ejs: ejs,
-      },
-      root: path.join(process.cwd(), 'src/views'),
+    // SPA fallback: for GET requests not matching API/workspace, serve index.html for Vue Router
+    app.setNotFoundHandler((request, reply) => {
+      if (request.method === 'GET' && !request.url.startsWith('/api/') && !request.url.startsWith('/workspace/')) {
+        const indexPath = path.join(staticRoot, 'index.html');
+        if (fs.existsSync(indexPath)) {
+          return reply.sendFile('index.html');
+        }
+      }
+      return reply.status(404).send({ success: false, message: 'Route not found' });
     });
 
     // Register routes
