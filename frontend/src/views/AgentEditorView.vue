@@ -19,7 +19,7 @@ const fileContents = ref<Record<string, string>>({
   'User.md': '',
 });
 const initialContents = ref<Record<string, string>>({});
-const saveMessage = ref('ALL FILES SAVED');
+const saveMessage = ref('All files saved');
 
 onMounted(async () => {
   try {
@@ -61,7 +61,7 @@ const hasAnyChanges = computed(() => {
 });
 
 watch(hasAnyChanges, (changed) => {
-  saveMessage.value = changed ? '● UNSAVED CHANGES' : 'ALL FILES SAVED';
+  saveMessage.value = changed ? '● Unsaved changes' : 'All files saved';
 });
 
 async function handleSave() {
@@ -70,10 +70,10 @@ async function handleSave() {
     allowedFiles.forEach((file) => {
       initialContents.value[file] = fileContents.value[file];
     });
-    saveMessage.value = '✓ SAVED SUCCESSFULLY';
+    saveMessage.value = '✓ Saved successfully';
     setTimeout(() => {
       if (!hasAnyChanges.value) {
-        saveMessage.value = 'ALL FILES SAVED';
+        saveMessage.value = 'All files saved';
       }
     }, 2500);
   } catch (err: any) {
@@ -85,27 +85,29 @@ async function handleSave() {
 <template>
   <div class="chat-area editor-container">
     <!-- Header -->
-    <header class="chat-header cyber-tile--bottom">
+    <header class="chat-header">
       <div style="display: flex; align-items: center; gap: 12px;">
-        <button class="cyber-btn cyber-btn--cyan" @click="router.push('/agents')">
-          ← BACK TO AGENTS
+        <button class="btn-primary cyber-btn--sm" @click="router.push('/agents')">
+          ← Back to Agents
         </button>
         <div class="system-status">
-          AGENT PROMPT MATRIX: [{{ agentId.toUpperCase() }}]
+          <span>Agent Editor:</span>
+          <span style="color: var(--accent-cyan);">{{ agentId }}</span>
         </div>
       </div>
 
       <button
-        class="cyber-btn cyber-btn--green"
+        class="btn-new-chat"
+        style="width: auto; padding: 7px 18px;"
         :disabled="agentsStore.isSavingFiles"
         @click="handleSave"
       >
-        {{ agentsStore.isSavingFiles ? 'SAVING...' : '💾 SAVE CHANGES' }}
+        <span>{{ agentsStore.isSavingFiles ? 'Saving...' : 'Save Changes' }}</span>
       </button>
     </header>
 
     <!-- Tabs Header -->
-    <div class="editor-tabs-bar cyber-tile--bottom">
+    <div class="editor-tabs-bar">
       <button
         v-for="file in allowedFiles"
         :key="file"
@@ -113,7 +115,7 @@ async function handleSave() {
         :class="{ active: activeTab === file, modified: isFileModified(file) }"
         @click="activeTab = file"
       >
-        {{ file }}
+        <span>{{ file }}</span>
         <span v-if="isFileModified(file)" class="change-dot">●</span>
       </button>
     </div>
@@ -129,9 +131,8 @@ async function handleSave() {
     </div>
 
     <!-- Status Bar Footer -->
-    <footer class="editor-status-bar cyber-tile--top">
+    <footer class="editor-status-bar">
       <div class="status-left">
-        STATUS:
         <span
           class="status-text"
           :class="{ modified: hasAnyChanges }"
@@ -140,7 +141,7 @@ async function handleSave() {
         </span>
       </div>
       <div class="status-right">
-        LINES: {{ lineCount }} | CHARS: {{ charCount }}
+        Lines: {{ lineCount }} | Characters: {{ charCount }}
       </div>
     </footer>
   </div>
@@ -153,92 +154,93 @@ async function handleSave() {
   flex: 1;
   height: 100vh;
   overflow: hidden;
-  background: var(--color-bg-main, #070e17);
+  background: var(--bg-canvas);
 }
 
 .editor-tabs-bar {
   display: flex;
-  background: rgba(3, 31, 42, 0.4);
-  border-bottom: 1px solid rgba(0, 240, 255, 0.2);
-  padding: 0 10px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-default);
+  padding: 0 16px;
+  gap: 4px;
 }
 
 .editor-tab-btn {
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  color: rgba(255, 255, 255, 0.6);
-  padding: 10px 18px;
-  font-family: var(--font-mono, monospace);
-  font-size: 12px;
-  font-weight: bold;
+  color: var(--text-muted);
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
 .editor-tab-btn:hover {
-  color: #fff;
-  background: rgba(0, 240, 255, 0.05);
+  color: var(--text-main);
+  background: var(--bg-elevated);
 }
 
 .editor-tab-btn.active {
-  color: var(--cyber-cyan-300, #87eaf2);
-  border-bottom-color: var(--cyber-cyan-500, #00f0ff);
-  background: rgba(0, 240, 255, 0.1);
+  color: var(--text-main);
+  border-bottom-color: var(--accent-primary);
+  background: var(--bg-card);
+  font-weight: 600;
 }
 
 .change-dot {
-  color: #ffaa00;
-  font-size: 10px;
+  color: var(--accent-amber);
+  font-size: 8px;
 }
 
 .editor-body {
   flex: 1;
   overflow: hidden;
-  padding: 10px;
+  padding: 16px;
 }
 
 .editor-textarea {
   width: 100%;
   height: 100%;
-  background: #040810;
-  color: #e2e8f0;
-  border: 1px solid rgba(0, 240, 255, 0.2);
-  border-radius: 4px;
-  padding: 16px;
-  font-family: 'Consolas', 'Fira Code', var(--font-mono, monospace);
-  font-size: 13px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  font-family: var(--font-mono);
+  font-size: 13.5px;
   line-height: 1.6;
   resize: none;
   outline: none;
-  box-sizing: border-box;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .editor-textarea:focus {
-  border-color: var(--cyber-cyan-500, #00f0ff);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-primary-subtle);
 }
 
 .editor-status-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 20px;
-  background: rgba(3, 31, 42, 0.6);
-  border-top: 1px solid rgba(0, 240, 255, 0.2);
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.6);
+  padding: 8px 24px;
+  background: var(--bg-surface-glass);
+  border-top: 1px solid var(--border-default);
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .status-text {
-  font-weight: bold;
-  color: #00ff88;
+  font-weight: 600;
+  color: var(--accent-emerald);
 }
 
 .status-text.modified {
-  color: #ffaa00;
+  color: var(--accent-amber);
 }
 </style>

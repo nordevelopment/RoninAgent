@@ -43,13 +43,13 @@ function copyMessageContent() {
 </script>
 
 <template>
-  <!-- System Execution Card -->
+  <!-- System / Tool Execution Card -->
   <div v-if="isSystem" class="system-message-card">
     <div class="system-message-header">
       <span class="system-message-icon">{{ message.icon || '⚙️' }}</span>
-      <span class="system-message-title">{{ message.systemTitle }}</span>
+      <span class="system-message-title">{{ message.systemTitle || 'System Action' }}</span>
       <span v-if="message.isSuccess !== undefined" class="system-message-badge" :class="{ success: message.isSuccess, info: !message.isSuccess }">
-        {{ message.isSuccess ? 'SUCCESS' : 'INFO' }}
+        {{ message.isSuccess ? 'Success' : 'Info' }}
       </span>
     </div>
     <div v-if="message.systemDetails" class="system-message-details">
@@ -69,22 +69,44 @@ function copyMessageContent() {
     <!-- Message Header -->
     <div class="message-header">
       <span class="sender-name">
-        {{ isUser ? '👤 OPERATOR' : '🤖 RONIN AGENT' }}
+        <template v-if="isUser">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span>You</span>
+        </template>
+        <template v-else>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+            <circle cx="12" cy="5" r="2"></circle>
+            <path d="M12 7v4"></path>
+          </svg>
+          <span>RoninAgent</span>
+        </template>
       </span>
+
       <button
         v-if="!isUser && message.content"
         class="copy-btn"
-        :title="copied ? 'COPIED!' : 'COPY MESSAGE'"
+        :title="copied ? 'Copied to clipboard' : 'Copy message'"
         @click="copyMessageContent"
       >
-        {{ copied ? '✓ COPIED' : '📋 COPY' }}
+        <svg v-if="copied" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <svg v-else viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        <span>{{ copied ? 'Copied' : 'Copy' }}</span>
       </button>
     </div>
 
-    <!-- Reasoning / Thinking Block (if present) -->
+    <!-- Neural Reasoning / Thinking Trace -->
     <details v-if="message.reasoning" class="reasoning-block">
       <summary class="reasoning-summary">
-        🧠 NEURAL REASONING TRACE
+        <span>🧠 Thinking Process</span>
       </summary>
       <div class="reasoning-content markdown-body" v-html="renderedReasoning"></div>
     </details>
@@ -115,120 +137,45 @@ function copyMessageContent() {
 </template>
 
 <style scoped>
-.system-message-card {
-  background: rgba(13, 20, 36, 0.8);
-  border-left: 3px solid var(--cyber-cyan-500, #00f0ff);
-  padding: 8px 12px;
-  border-radius: 4px;
-  margin: 6px 0;
-  font-family: var(--font-mono, monospace);
-  font-size: 12px;
-}
-
-.system-message-header {
+.sender-name {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: bold;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
 }
 
-.system-message-badge {
-  font-size: 9px;
-  padding: 1px 6px;
-  border-radius: 2px;
-  margin-left: auto;
-}
-
-.system-message-badge.success {
-  background: rgba(0, 255, 136, 0.2);
-  color: #00ff88;
-  border: 1px solid #00ff88;
-}
-
-.system-message-badge.info {
-  background: rgba(0, 240, 255, 0.2);
-  color: #00f0ff;
-  border: 1px solid #00f0ff;
-}
-
-.system-message-details {
-  margin-top: 4px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 11px;
-}
-
-.system-message-result pre {
-  background: rgba(0, 0, 0, 0.4);
-  padding: 6px;
-  border-radius: 4px;
-  margin-top: 4px;
-  overflow-x: auto;
-  font-size: 11px;
-}
-
-.reasoning-block {
-  margin-bottom: 8px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px dashed rgba(255, 170, 0, 0.4);
-  border-radius: 4px;
-  padding: 6px;
-}
-
-.reasoning-summary {
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  font-weight: bold;
-  color: #ffaa00;
-  cursor: pointer;
-  user-select: none;
-}
-
-.reasoning-content {
-  margin-top: 6px;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .message-attachments {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .attached-image-preview {
-  max-width: 250px;
+  max-width: 260px;
   max-height: 200px;
-  border-radius: 4px;
-  border: 1px solid var(--cyber-cyan-500, #00f0ff);
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-sm);
 }
 
 .attached-doc-chip {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(0, 240, 255, 0.1);
-  border: 1px solid rgba(0, 240, 255, 0.3);
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 11px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  padding: 5px 10px;
+  border-radius: var(--radius-xs, 4px);
+  font-size: 12px;
   font-family: var(--font-mono, monospace);
-}
-
-.copy-btn {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.6);
-  border-radius: 3px;
-  padding: 2px 6px;
-  font-size: 10px;
-  font-family: var(--font-mono, monospace);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.copy-btn:hover {
-  border-color: var(--cyber-cyan-500, #00f0ff);
-  color: var(--cyber-cyan-300, #87eaf2);
+  color: var(--text-main);
 }
 </style>

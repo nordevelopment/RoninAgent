@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, nextTick } from 'vue';
 import AttachmentsPreview, { PendingFile } from './AttachmentsPreview.vue';
 
 const props = defineProps<{
@@ -16,6 +16,14 @@ const messageText = ref<string>('');
 const selectedImage = ref<string | null>(null);
 const attachedFiles = ref<PendingFile[]>([]);
 const docFileInput = ref<HTMLInputElement | null>(null);
+const textareaRef = ref<HTMLTextAreaElement | null>(null);
+
+function handleInput() {
+  if (textareaRef.value) {
+    textareaRef.value.style.height = 'auto';
+    textareaRef.value.style.height = Math.min(textareaRef.value.scrollHeight, 180) + 'px';
+  }
+}
 
 function handleKeyDown(e: KeyboardEvent) {
   if (e.key === 'Enter' && !e.shiftKey) {
@@ -93,6 +101,12 @@ function submit() {
   messageText.value = '';
   selectedImage.value = null;
   attachedFiles.value = [];
+
+  nextTick(() => {
+    if (textareaRef.value) {
+      textareaRef.value.style.height = 'auto';
+    }
+  });
 }
 
 defineExpose({
@@ -101,136 +115,89 @@ defineExpose({
 </script>
 
 <template>
-  <div class="input-area cyber-tile--top">
-    <!-- Attachments Preview Bar -->
-    <AttachmentsPreview
-      :image-preview="selectedImage"
-      :attached-files="attachedFiles"
-      @remove-image="removeImage"
-      @remove-file="removeFile"
-    />
+  <div class="input-area">
+    <div class="floating-input-dock">
+      <!-- Attachments Preview Tray -->
+      <AttachmentsPreview
+        :image-preview="selectedImage"
+        :attached-files="attachedFiles"
+        @remove-image="removeImage"
+        @remove-file="removeFile"
+      />
 
-    <div class="input-row">
-      <div class="input-container">
-        <textarea
-          v-model="messageText"
-          class="cyber-textarea"
-          placeholder="Enter message or task, attach files (.txt, .pdf, .xlsx, .docx, images)..."
-          :disabled="disabled && !isGenerating"
-          @keydown="handleKeyDown"
-          rows="1"
-        ></textarea>
-      </div>
+      <div class="input-row">
+        <!-- Textarea -->
+        <div class="input-container">
+          <textarea
+            ref="textareaRef"
+            v-model="messageText"
+            class="cyber-textarea"
+            placeholder="Ask Ronin anything, describe a task, or attach files..."
+            :disabled="disabled && !isGenerating"
+            rows="1"
+            @input="handleInput"
+            @keydown="handleKeyDown"
+          ></textarea>
+        </div>
 
-      <div class="send-button-container">
-        <!-- File Attach Button -->
-        <label
-          class="cyber-btn cyber-btn--cyan cyber-btn--sm attach-btn"
-          title="ATTACH FILES (.TXT, .PDF, .XLSX, .DOCX, IMAGES)"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            width="18"
-            height="18"
+        <!-- Action Buttons Tray -->
+        <div class="send-button-container">
+          <!-- File Attach Button -->
+          <label
+            class="attach-btn"
+            title="Attach documents or images"
           >
-            <path
-              d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              width="18"
+              height="18"
+            >
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+            </svg>
+            <input
+              ref="docFileInput"
+              type="file"
+              accept=".txt,.md,.json,.csv,.log,.pdf,.xlsx,.xls,.docx,.doc,image/*"
+              multiple
+              style="display: none;"
+              @change="handleDocSelect"
             />
-          </svg>
-          <input
-            ref="docFileInput"
-            type="file"
-            accept=".txt,.md,.json,.csv,.log,.pdf,.xlsx,.xls,.docx,.doc,image/*"
-            multiple
-            style="display: none;"
-            @change="handleDocSelect"
-          />
-        </label>
+          </label>
 
-        <!-- Send / Stop Button -->
-        <button
-          v-if="isGenerating"
-          type="button"
-          class="cyber-btn cyber-btn--red"
-          title="STOP AI GENERATION"
-          @click="emit('stop')"
-        >
-          ⏹ STOP
-        </button>
+          <!-- Stop / Send Button -->
+          <button
+            v-if="isGenerating"
+            type="button"
+            class="cyber-btn cyber-btn--red"
+            title="Stop generation"
+            @click="emit('stop')"
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+            </svg>
+          </button>
 
-        <button
-          v-else
-          type="button"
-          class="cyber-btn cyber-btn--cyan send-btn"
-          title="SEND MESSAGE"
-          :disabled="disabled"
-          @click="submit"
-        >
-          <svg class="send-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-          </svg>
-        </button>
+          <button
+            v-else
+            type="button"
+            class="send-btn"
+            title="Send message"
+            :disabled="disabled || (!messageText.trim() && attachedFiles.length === 0 && !selectedImage)"
+            @click="submit"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.input-area {
-  display: flex;
-  flex-direction: column;
-  background: rgba(7, 47, 63, 0.4);
-  border-top: 1px solid rgba(0, 240, 255, 0.2);
-}
-
-.input-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  padding: 10px 14px;
-}
-
-.input-container {
-  flex: 1;
-}
-
-.cyber-textarea {
-  width: 100%;
-  min-height: 60px;
-  max-height: 160px;
-  resize: none;
-  font-family: var(--font-sans, system-ui, sans-serif);
-  font-size: 14px;
-  line-height: 1.4;
-  padding: 8px 12px;
-  box-sizing: border-box;
-}
-
-.send-button-container {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.attach-btn {
-  padding: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-}
-
-.send-btn {
-  padding: 8px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-</style>

@@ -69,6 +69,7 @@ export const useChatStore = defineStore('chat', () => {
         const settings = await res.json();
         activeModelName.value = settings.aiDefaultModel || '';
         const hasKey = !!(
+          settings.hasAiApiKey ||
           settings.aiProvider === 'local' ||
           (settings.aiProvider === 'openrouter' && settings.openrouterApiKey) ||
           (settings.aiProvider === 'custom' && settings.customApiKey) ||

@@ -31,10 +31,10 @@ function formatSize(bytes: number): string {
       <button
         class="btn-remove"
         type="button"
-        title="REMOVE IMAGE"
+        title="Remove image"
         @click="emit('remove-image')"
       >
-        ×
+        ✕
       </button>
     </div>
 
@@ -52,10 +52,10 @@ function formatSize(bytes: number): string {
       <button
         class="btn-remove"
         type="button"
-        title="REMOVE FILE"
+        title="Remove file"
         @click="emit('remove-file', f.id)"
       >
-        ×
+        ✕
       </button>
     </div>
   </div>
@@ -66,9 +66,9 @@ function formatSize(bytes: number): string {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 6px 12px;
-  background: rgba(0, 0, 0, 0.2);
-  border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+  padding: 8px 14px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .image-preview-container {
@@ -77,9 +77,9 @@ function formatSize(bytes: number): string {
 }
 
 .image-preview {
-  height: 60px;
-  border-radius: 4px;
-  border: 1px solid var(--cyber-cyan-500, #00f0ff);
+  height: 56px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
   object-fit: cover;
 }
 
@@ -87,44 +87,48 @@ function formatSize(bytes: number): string {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(0, 240, 255, 0.1);
-  border: 1px solid rgba(0, 240, 255, 0.3);
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
 }
 
 .doc-name {
-  max-width: 140px;
+  max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-main);
+  font-weight: 500;
 }
 
 .doc-size {
-  opacity: 0.6;
-  font-size: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+  margin-left: 4px;
 }
 
 .btn-remove {
-  background: rgba(255, 0, 85, 0.3);
-  border: 1px solid #ff0055;
-  color: #fff;
-  border-radius: 50%;
+  background: var(--bg-elevated-hover);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  border-radius: var(--radius-full);
   width: 18px;
   height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 10px;
   line-height: 1;
   padding: 0;
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
 }
 
 .btn-remove:hover {
-  background: #ff0055;
+  background: var(--accent-rose-subtle);
+  color: var(--accent-rose);
+  border-color: var(--accent-rose);
 }
 </style>

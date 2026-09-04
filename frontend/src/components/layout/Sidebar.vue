@@ -63,13 +63,13 @@ function handleDeleteSession(id: string, e: Event) {
 }
 
 function handleClearChat() {
-  if (confirm('Clear messages in current chat?')) {
+  if (confirm('Clear all messages in current chat?')) {
     chatStore.clearCurrentChat();
   }
 }
 
 function handlePurgeMemory() {
-  if (confirm('Purge all agent working memory for this session?')) {
+  if (confirm('Purge all working memory for this session?')) {
     chatStore.purgeMemory();
   }
 }
@@ -80,154 +80,191 @@ function navigateTo(path: string) {
 </script>
 
 <template>
-  <aside class="sidebar cyber-bg-primary">
-    <!-- Logo & Brand -->
-    <div class="logo-panel" @click="navigateTo('/')" style="cursor: pointer;">
-      <div class="logo cyber-nav__brand">
-        RoninAgent
+  <aside class="sidebar">
+    <!-- Brand Header -->
+    <div class="sidebar-brand-panel" @click="navigateTo('/')">
+      <div class="brand-title">
+        <div class="brand-icon-wrapper">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+        </div>
+        <span>RoninAgent</span>
       </div>
-      <div class="cyber-status">
-        <div class="cyber-status__dot cyber-icon--pulse"></div>
+      <div class="brand-status-dot" title="AI Core Active"></div>
+    </div>
+
+    <!-- Primary Action: New Chat -->
+    <button id="btnNewChat" class="btn-new-chat" @click="handleNewChat">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      <span>New Chat</span>
+    </button>
+
+    <!-- Navigation Hub Links -->
+    <nav class="sidebar-nav-list">
+      <button
+        class="sidebar-nav-link"
+        :class="{ active: route.path === '/' }"
+        @click="navigateTo('/')"
+      >
+        <span class="sidebar-nav-icon">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </span>
+        <span>Chat</span>
+      </button>
+
+      <button
+        id="btnOpenAgents"
+        class="sidebar-nav-link"
+        :class="{ active: route.path === '/agents' || route.path.startsWith('/edit-agent') }"
+        @click="navigateTo('/agents')"
+      >
+        <span class="sidebar-nav-icon">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+            <circle cx="12" cy="5" r="2"></circle>
+            <path d="M12 7v4"></path>
+            <line x1="8" y1="16" x2="8" y2="16"></line>
+            <line x1="16" y1="16" x2="16" y2="16"></line>
+          </svg>
+        </span>
+        <span>Agents Hub</span>
+      </button>
+
+      <button
+        id="btnOpenTasks"
+        class="sidebar-nav-link"
+        :class="{ active: route.path === '/tasks' }"
+        @click="navigateTo('/tasks')"
+      >
+        <span class="sidebar-nav-icon">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 11l3 3L22 4"></path>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+          </svg>
+        </span>
+        <span>Task Manager</span>
+      </button>
+
+      <button
+        id="btnOpenWorkspace"
+        class="sidebar-nav-link"
+        title="Open Workspace Folder"
+        @click="chatStore.openWorkspaceFolder"
+      >
+        <span class="sidebar-nav-icon">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </span>
+        <span>Workspace</span>
+      </button>
+    </nav>
+
+    <!-- Sessions History Section -->
+    <div class="sidebar-section-header">
+      <span>RECENT SESSIONS</span>
+    </div>
+
+    <div class="sidebar-sessions-list" id="sessionsList">
+      <div
+        v-for="s in chatStore.sessions"
+        :key="s.id"
+        class="session-item-row"
+        :class="{ active: s.id === chatStore.currentSessionId && route.path === '/' }"
+        @click="handleSelectSession(s.id)"
+      >
+        <!-- Editing Session Title -->
+        <div v-if="editingSessionId === s.id" class="session-edit-box" @click.stop>
+          <input
+            v-model="editTitleText"
+            class="cyber-input cyber-input--sm"
+            @keydown.enter="saveRename(s.id)"
+            @keydown.esc="cancelRename"
+            autofocus
+          />
+          <button class="cyber-btn cyber-btn--xs cyber-btn--green" @click="saveRename(s.id)">✓</button>
+          <button class="cyber-btn cyber-btn--xs" @click="cancelRename">✕</button>
+        </div>
+
+        <!-- Normal Session Row -->
+        <template v-else>
+          <span class="session-label-text" :title="s.title">
+            {{ s.title || s.id }}
+          </span>
+          <div class="session-actions-group">
+            <button
+              class="session-action-icon-btn"
+              title="Rename session"
+              @click="startRename(s.id, s.title, $event)"
+            >
+              ✏️
+            </button>
+            <button
+              class="session-action-icon-btn delete-hover"
+              title="Delete session"
+              @click="handleDeleteSession(s.id, $event)"
+            >
+              🗑
+            </button>
+          </div>
+        </template>
+      </div>
+
+      <div v-if="chatStore.sessions.length === 0" class="no-sessions">
+        No sessions yet
       </div>
     </div>
 
-    <!-- Theme Switcher -->
-    <div class="sidebar-panel">
-      <div class="sessions-title cyber-text-glow">THEME</div>
+    <!-- Theme & Quick Settings Selector -->
+    <div style="padding: 0 4px;">
       <select
-        class="cyber-select cyber-theme-select"
+        class="cyber-select"
         :value="themeStore.theme"
         @change="onThemeChange"
       >
-        <option value="dark">🌙 Cyber Dark</option>
-        <option value="light">☀️ Modern Light</option>
+        <option value="dark">🌊 Deep Ocean</option>
+        <option value="light">☀️ Clean Light</option>
       </select>
     </div>
 
-    <!-- New Chat Button -->
-    <button id="btnNewChat" class="cyber-btn" @click="handleNewChat">
-      + NEW CHAT
-    </button>
-
-    <!-- Sessions List -->
-    <div class="sidebar-panel sessions-panel">
-      <div class="sessions-title cyber-text-glow">SESSIONS</div>
-      <div class="sessions-list" id="sessionsList">
-        <div
-          v-for="s in chatStore.sessions"
-          :key="s.id"
-          class="session-item"
-          :class="{ active: s.id === chatStore.currentSessionId }"
-          @click="handleSelectSession(s.id)"
-        >
-          <!-- Editing Mode -->
-          <div v-if="editingSessionId === s.id" class="session-edit-box" @click.stop>
-            <input
-              v-model="editTitleText"
-              class="cyber-input cyber-input--sm"
-              @keydown.enter="saveRename(s.id)"
-              @keydown.esc="cancelRename"
-              autofocus
-            />
-            <button class="cyber-btn cyber-btn--xs cyber-btn--green" @click="saveRename(s.id)">✓</button>
-            <button class="cyber-btn cyber-btn--xs" @click="cancelRename">✕</button>
-          </div>
-
-          <!-- Normal Display Mode -->
-          <template v-else>
-            <span class="session-title-text" :title="s.title">
-              {{ s.title || s.id }}
-            </span>
-            <div class="session-actions">
-              <button
-                class="session-action-btn"
-                title="Rename Session"
-                @click="startRename(s.id, s.title, $event)"
-              >
-                ✏️
-              </button>
-              <button
-                class="session-action-btn delete-btn"
-                title="Delete Session"
-                @click="handleDeleteSession(s.id, $event)"
-              >
-                🗑
-              </button>
-            </div>
-          </template>
-        </div>
-
-        <div v-if="chatStore.sessions.length === 0" class="no-sessions">
-          NO SESSIONS YET
-        </div>
-      </div>
-    </div>
-
-    <!-- Navigation Hub Buttons -->
-    <div class="sidebar-panel" style="display: flex; flex-direction: column; gap: 8px;">
-      <button
-        id="btnOpenAgents"
-        class="cyber-btn cyber-btn--cyan w-100"
-        :class="{ active: route.path === '/agents' }"
-        @click="navigateTo('/agents')"
-        style="display: flex; align-items: center; justify-content: center; gap: 8px;"
-      >
-        <span>🤖</span> AGENTS HUB
-      </button>
-      <button
-        id="btnOpenTasks"
-        class="cyber-btn cyber-btn--green w-100"
-        :class="{ active: route.path === '/tasks' }"
-        @click="navigateTo('/tasks')"
-        style="display: flex; align-items: center; justify-content: center; gap: 8px;"
-      >
-        <span>📋</span> TASK MANAGER
-      </button>
-      <button
-        id="btnOpenWorkspace"
-        class="cyber-btn cyber-btn--cyan w-100"
-        title="OPEN WORKSPACE FOLDER"
-        @click="chatStore.openWorkspaceFolder"
-        style="display: flex; align-items: center; justify-content: center; gap: 8px;"
-      >
-        <span>📁</span> WORKSPACE
-      </button>
-    </div>
-
     <!-- Sidebar Footer -->
-    <div class="sidebar-footer">
+    <div class="sidebar-footer-menu">
       <button
         id="btnOpenSettings"
-        class="cyber-btn cyber-btn--cyan w-100"
+        class="sidebar-footer-btn"
         :class="{ active: route.path === '/settings' }"
         @click="navigateTo('/settings')"
       >
-        ⚙️ SETTINGS
+        <span>⚙️</span>
+        <span>Settings</span>
       </button>
 
       <button
         id="btnClearChat"
-        class="cyber-btn cyber-btn--magenta w-100"
-        style="margin-top: 8px;"
+        class="sidebar-footer-btn"
         @click="handleClearChat"
       >
-        CLEAR CHAT
+        <span>🧹</span>
+        <span>Clear Chat</span>
       </button>
 
       <button
         id="btnClearMemory"
-        class="cyber-btn cyber-btn--magenta w-100"
-        style="margin-top: 8px;"
+        class="sidebar-footer-btn danger-hover"
         @click="handlePurgeMemory"
       >
-        PURGE MEMORY
+        <span>⚡</span>
+        <span>Purge Memory</span>
       </button>
 
-      <!-- Robot Pet Widget -->
-      <div
-        class="sidebar-panel"
-        style="display: flex; justify-content: center; align-items: center; padding: 10px 0; margin-bottom: 5px;"
-      >
+      <!-- Robot Pet Companion -->
+      <div style="display: flex; justify-content: center; align-items: center; padding: 6px 0;">
         <RobotPet />
       </div>
     </div>
@@ -235,89 +272,10 @@ function navigateTo(path: string) {
 </template>
 
 <style scoped>
-.sessions-panel {
-  flex: 1;
-  min-height: 120px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.sessions-list {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: 250px;
-}
-
-.session-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 8px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: var(--font-mono, monospace);
-  font-size: 12px;
-}
-
-.session-item:hover {
-  background: rgba(0, 240, 255, 0.08);
-  border-color: rgba(0, 240, 255, 0.3);
-}
-
-.session-item.active {
-  background: rgba(0, 240, 255, 0.15);
-  border-color: var(--cyber-cyan-500, #00f0ff);
-  color: var(--cyber-cyan-300, #87eaf2);
-}
-
-.session-title-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-}
-
-.session-actions {
-  display: none;
-  gap: 4px;
-}
-
-.session-item:hover .session-actions {
-  display: flex;
-}
-
-.session-action-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 2px;
-  opacity: 0.7;
-  transition: opacity 0.2s;
-}
-
-.session-action-btn:hover {
-  opacity: 1;
-}
-
 .session-edit-box {
   display: flex;
   align-items: center;
   gap: 4px;
   width: 100%;
-}
-
-.no-sessions {
-  text-align: center;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.3);
-  padding: 16px 0;
 }
 </style>

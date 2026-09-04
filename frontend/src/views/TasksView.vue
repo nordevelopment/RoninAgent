@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useTasksStore, TaskItem } from '../stores/tasks';
 
@@ -23,6 +23,11 @@ const activeResultTask = ref<TaskItem | null>(null);
 onMounted(() => {
   tasksStore.fetchTasks();
 });
+
+const totalCount = computed(() => tasksStore.tasks.length);
+const readyCount = computed(() => tasksStore.tasks.filter((t) => t.status === 'ready').length);
+const runningCount = computed(() => tasksStore.tasks.filter((t) => t.status === 'running').length);
+const doneCount = computed(() => tasksStore.tasks.filter((t) => t.status === 'done').length);
 
 function openAddModal() {
   editingTaskId.value = null;
@@ -110,197 +115,220 @@ function formatDate(d?: string | null): string {
 <template>
   <div class="chat-area tasks-container">
     <!-- Header -->
-    <header class="chat-header cyber-tile--bottom">
+    <header class="chat-header">
       <div style="display: flex; align-items: center; gap: 12px;">
-        <button class="cyber-btn cyber-btn--cyan" @click="router.push('/')">
-          ← BACK TO CHAT
+        <button class="btn-primary cyber-btn--sm" @click="router.push('/')">
+          ← Back to Chat
         </button>
-        <div class="system-status">TASK CONTROL MATRIX</div>
+        <div class="system-status">Task Manager</div>
       </div>
 
       <div style="display: flex; gap: 10px;">
         <button
-          class="cyber-btn cyber-btn--magenta"
+          class="btn-primary cyber-btn--sm"
           :disabled="tasksStore.isRunningBatch"
           @click="tasksStore.runReadyTasks"
         >
-          {{ tasksStore.isRunningBatch ? '⚡ RUNNING...' : '⚡ RUN READY TASKS' }}
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          <span>{{ tasksStore.isRunningBatch ? 'Executing...' : 'Run Ready Tasks' }}</span>
         </button>
-        <button class="cyber-btn cyber-btn--green" @click="openAddModal">
-          + CREATE TASK
+        <button class="btn-new-chat" style="width: auto; padding: 7px 14px;" @click="openAddModal">
+          <span>+ Create Task</span>
         </button>
       </div>
     </header>
 
     <!-- Content Area -->
     <div class="tasks-content">
-      <table class="cyber-table">
-        <thead>
-          <tr>
-            <th style="width: 60px;">ID</th>
-            <th>INSTRUCTION / TITLE</th>
-            <th style="width: 100px;">STATUS</th>
-            <th style="width: 120px;">MODE</th>
-            <th style="width: 160px;">SCHEDULED RUN</th>
-            <th style="width: 160px;">CREATED AT</th>
-            <th style="width: 180px;">ACTIONS</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="t in tasksStore.tasks" :key="t.id">
-            <td>#{{ t.id }}</td>
-            <td class="task-title-cell">
-              <strong>{{ t.title }}</strong>
-            </td>
-            <td>
-              <span class="cyber-badge" :class="'cyber-badge--' + t.status">
-                {{ t.status.toUpperCase() }}
-              </span>
-            </td>
-            <td>
-              <span v-if="t.cron_expression" class="mode-tag">CRON ({{ t.cron_expression }})</span>
-              <span v-else-if="t.repeat_interval" class="mode-tag">REPEAT ({{ t.repeat_interval }}s)</span>
-              <span v-else-if="t.is_auto" class="mode-tag">AUTO</span>
-              <span v-else class="mode-tag manual">MANUAL</span>
-            </td>
-            <td>{{ formatDate(t.run_at) }}</td>
-            <td>{{ formatDate(t.created_at) }}</td>
-            <td class="actions-cell">
-              <button
-                v-if="t.result"
-                class="cyber-btn cyber-btn--xs cyber-btn--cyan"
-                title="View Result"
-                @click="viewResult(t)"
-              >
-                👁 RESULT
-              </button>
-              <button
-                class="cyber-btn cyber-btn--xs"
-                title="Edit Task"
-                @click="openEditModal(t)"
-              >
-                ✏️
-              </button>
-              <button
-                class="cyber-btn cyber-btn--xs cyber-btn--red"
-                title="Delete Task"
-                @click="handleDeleteTask(t.id)"
-              >
-                🗑
-              </button>
-            </td>
-          </tr>
+      <!-- Metrics Overview Strip -->
+      <div class="metrics-overview-strip">
+        <div class="metric-card">
+          <div class="metric-label">Total Tasks</div>
+          <div class="metric-value">{{ totalCount }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label" style="color: #818cf8;">Ready</div>
+          <div class="metric-value">{{ readyCount }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label" style="color: #fbbf24;">In Progress</div>
+          <div class="metric-value">{{ runningCount }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label" style="color: #34d399;">Completed</div>
+          <div class="metric-value">{{ doneCount }}</div>
+        </div>
+      </div>
 
-          <tr v-if="tasksStore.tasks.length === 0">
-            <td colspan="7" class="empty-table-cell">
-              {{ tasksStore.isLoading ? 'LOADING TASKS...' : 'NO TASKS FOUND. CREATE ONE TO GET STARTED.' }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <!-- Modern Tasks Table Container -->
+      <div class="tasks-table-card">
+        <table class="modern-table" v-if="tasksStore.tasks.length > 0">
+          <thead>
+            <tr>
+              <th style="width: 60px;">ID</th>
+              <th>Task Instruction</th>
+              <th style="width: 110px;">Status</th>
+              <th style="width: 140px;">Execution Mode</th>
+              <th style="width: 170px;">Scheduled Run</th>
+              <th style="width: 170px;">Created</th>
+              <th style="width: 140px; text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="t in tasksStore.tasks" :key="t.id">
+              <td class="id-cell">#{{ t.id }}</td>
+              <td class="task-title-cell">
+                <span class="task-name">{{ t.title }}</span>
+              </td>
+              <td>
+                <span class="status-pill" :class="'status-' + t.status">
+                  <span v-if="t.status === 'running'" class="pulse-dot"></span>
+                  {{ t.status }}
+                </span>
+              </td>
+              <td>
+                <span v-if="t.cron_expression" class="mode-badge">Cron ({{ t.cron_expression }})</span>
+                <span v-else-if="t.repeat_interval" class="mode-badge">Repeat ({{ t.repeat_interval }}s)</span>
+                <span v-else-if="t.is_auto" class="mode-badge">Auto</span>
+                <span v-else class="mode-badge">Manual</span>
+              </td>
+              <td class="date-cell">{{ formatDate(t.run_at) }}</td>
+              <td class="date-cell">{{ formatDate(t.created_at) }}</td>
+              <td class="actions-cell">
+                <button
+                  v-if="t.result"
+                  class="btn-primary cyber-btn--xs"
+                  title="View Task Result"
+                  @click="viewResult(t)"
+                >
+                  Result
+                </button>
+                <button
+                  class="session-action-icon-btn"
+                  title="Edit task"
+                  @click="openEditModal(t)"
+                >
+                  ✏️
+                </button>
+                <button
+                  class="session-action-icon-btn delete-hover"
+                  title="Delete task"
+                  @click="handleDeleteTask(t.id)"
+                >
+                  🗑
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div v-else class="empty-table-placeholder">
+          <div style="font-size: 36px; margin-bottom: 10px;">📋</div>
+          <div style="font-size: 15px; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">No tasks scheduled</div>
+          <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Create autonomous background jobs or cron routines for RoninAgent.</div>
+          <button class="btn-primary" @click="openAddModal">+ Create first task</button>
+        </div>
+      </div>
     </div>
 
-    <!-- Create / Edit Task Modal -->
-    <div v-if="isModalOpen" class="task-modal-overlay" @click.self="closeModal">
-      <div class="task-modal-card">
-        <div class="task-modal-header">
-          <div class="task-modal-title cyber-text-glow">
-            {{ editingTaskId ? 'EDIT TASK #' + editingTaskId : 'CREATE NEW TASK' }}
-          </div>
-          <button class="task-modal-close" @click="closeModal">✕</button>
+    <!-- Modal: Add/Edit Task -->
+    <div v-if="isModalOpen" class="modal-overlay" @click.self="closeModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">{{ editingTaskId ? 'Edit Task #' + editingTaskId : 'Create New Task' }}</div>
+          <button class="modal-close-btn" @click="closeModal">✕</button>
         </div>
 
-        <div class="task-modal-body">
-          <div class="cyber-form-group">
-            <label class="cyber-label">TASK INSTRUCTION / TITLE *</label>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Task Instruction *</label>
             <textarea
               v-model="formTitle"
-              class="cyber-textarea"
+              class="form-input"
               rows="3"
-              placeholder="e.g. Check server logs and summarize errors"
+              placeholder="e.g. Check system logs, summarize errors, and send Telegram notification..."
             ></textarea>
           </div>
 
-          <div class="form-row">
-            <div class="cyber-form-group flex-1">
-              <label class="cyber-label">STATUS</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="form-group">
+              <label class="form-label">Initial Status</label>
               <select v-model="formStatus" class="cyber-select">
-                <option value="ready">READY</option>
-                <option value="running">RUNNING</option>
-                <option value="done">DONE</option>
-                <option value="failed">FAILED</option>
+                <option value="ready">Ready</option>
+                <option value="running">Running</option>
+                <option value="done">Done</option>
+                <option value="failed">Failed</option>
               </select>
             </div>
 
-            <div class="cyber-form-group flex-1">
-              <label class="cyber-label">SCHEDULED RUN TIME</label>
-              <input v-model="formRunAt" type="datetime-local" class="cyber-input" />
+            <div class="form-group">
+              <label class="form-label">Scheduled Run Time</label>
+              <input
+                v-model="formRunAt"
+                type="datetime-local"
+                class="form-input"
+              />
             </div>
           </div>
 
-          <div class="form-row">
-            <div class="cyber-form-group flex-1">
-              <label class="cyber-label">REPEAT INTERVAL (SECONDS)</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="form-group">
+              <label class="form-label">Repeat Interval (sec)</label>
               <input
                 v-model.number="formRepeatInterval"
                 type="number"
-                class="cyber-input"
-                placeholder="Optional, e.g. 3600"
+                class="form-input"
+                placeholder="e.g. 3600"
               />
             </div>
 
-            <div class="cyber-form-group flex-1">
-              <label class="cyber-label">CRON EXPRESSION</label>
+            <div class="form-group">
+              <label class="form-label">Cron Expression</label>
               <input
                 v-model="formCron"
                 type="text"
-                class="cyber-input"
-                placeholder="Optional, e.g. 0 * * * *"
+                class="form-input"
+                placeholder="e.g. 0 * * * *"
               />
             </div>
           </div>
 
-          <div class="cyber-form-group checkbox-group">
-            <label class="cyber-checkbox-label">
-              <input v-model="formIsAuto" type="checkbox" />
-              <span>ENABLE AUTOMATIC BACKGROUND EXECUTION</span>
+          <div style="margin-top: 6px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text-body);">
+              <input type="checkbox" v-model="formIsAuto" style="accent-color: var(--accent-primary);" />
+              <span>Enable automatic background execution</span>
             </label>
           </div>
         </div>
 
-        <div class="task-modal-footer">
-          <button class="cyber-btn" @click="closeModal">CANCEL</button>
-          <button class="cyber-btn cyber-btn--green" @click="handleSaveTask">
-            {{ editingTaskId ? 'SAVE CHANGES' : 'CREATE TASK' }}
+        <div class="modal-footer">
+          <button class="btn-primary cyber-btn--sm" @click="closeModal">Cancel</button>
+          <button class="btn-new-chat" style="width: auto; padding: 7px 18px;" @click="handleSaveTask">
+            {{ editingTaskId ? 'Save Changes' : 'Create Task' }}
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Task Result Modal -->
-    <div v-if="isResultModalOpen && activeResultTask" class="task-modal-overlay" @click.self="closeResultModal">
-      <div class="task-modal-card task-modal-card--lg">
-        <div class="task-modal-header">
-          <div class="task-modal-title cyber-text-glow">
-            EXECUTION RESULT: #{{ activeResultTask.id }}
-          </div>
-          <button class="task-modal-close" @click="closeResultModal">✕</button>
+    <!-- Modal: View Task Result -->
+    <div v-if="isResultModalOpen" class="modal-overlay" @click.self="closeResultModal">
+      <div class="modal-content" style="max-width: 680px;">
+        <div class="modal-header">
+          <div class="modal-title">Task Result: #{{ activeResultTask?.id }}</div>
+          <button class="modal-close-btn" @click="closeResultModal">✕</button>
         </div>
 
-        <div class="task-modal-body">
-          <div class="cyber-form-group">
-            <label class="cyber-label">TASK INSTRUCTION</label>
-            <div class="result-instruction-box">{{ activeResultTask.title }}</div>
+        <div class="modal-body">
+          <div style="font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 8px;">
+            {{ activeResultTask?.title }}
           </div>
-
-          <div class="cyber-form-group">
-            <label class="cyber-label">OUTPUT / LOG</label>
-            <pre class="result-output-box"><code>{{ activeResultTask.result }}</code></pre>
-          </div>
+          <pre class="result-code-box"><code>{{ activeResultTask?.result }}</code></pre>
         </div>
 
-        <div class="task-modal-footer">
-          <button class="cyber-btn cyber-btn--cyan" @click="closeResultModal">CLOSE</button>
+        <div class="modal-footer">
+          <button class="btn-primary cyber-btn--sm" @click="closeResultModal">Close</button>
         </div>
       </div>
     </div>
@@ -308,177 +336,155 @@ function formatDate(d?: string | null): string {
 </template>
 
 <style scoped>
-.tasks-container {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  height: 100vh;
+.tasks-table-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm), var(--shadow-inner-light);
   overflow: hidden;
-  background: var(--color-bg-main, #0b0f19);
 }
 
-.tasks-content {
-  flex: 1;
-  overflow: auto;
-  padding: 20px;
+.modern-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
 }
 
-.task-title-cell {
-  max-width: 320px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.modern-table th {
+  background: var(--bg-elevated);
+  padding: 12px 16px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-default);
+  font-size: 12px;
 }
 
-.mode-tag {
+.modern-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-body);
+}
+
+.modern-table tr:hover td {
+  background: var(--bg-elevated);
+}
+
+.id-cell {
   font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  padding: 2px 6px;
-  background: rgba(0, 240, 255, 0.1);
-  border: 1px solid rgba(0, 240, 255, 0.3);
-  border-radius: 3px;
+  color: var(--text-faint);
+  font-weight: 600;
 }
 
-.mode-tag.manual {
-  opacity: 0.5;
-  border-color: rgba(255, 255, 255, 0.2);
+.task-name {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: live-pulse 1.4s infinite;
+}
+
+.mode-badge {
+  font-size: 11.5px;
+  padding: 2px 7px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xs);
+  color: var(--text-muted);
+}
+
+.date-cell {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .actions-cell {
   display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 6px;
 }
 
-.empty-table-cell {
+.empty-table-placeholder {
+  padding: 48px 20px;
   text-align: center;
-  padding: 40px;
-  color: rgba(255, 255, 255, 0.4);
-  font-family: var(--font-mono, monospace);
-}
-
-.cyber-badge--ready { background: rgba(0, 240, 255, 0.2); color: #00f0ff; border: 1px solid #00f0ff; }
-.cyber-badge--running { background: rgba(255, 170, 0, 0.2); color: #ffaa00; border: 1px solid #ffaa00; }
-.cyber-badge--done { background: rgba(0, 255, 136, 0.2); color: #00ff88; border: 1px solid #00ff88; }
-.cyber-badge--failed { background: rgba(255, 0, 85, 0.2); color: #ff0055; border: 1px solid #ff0055; }
-
-/* Custom Scoped Modal */
-.task-modal-overlay {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(3, 8, 16, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 99999;
-}
-
-.task-modal-card {
-  background: #101726;
-  border: 1px solid var(--cyber-cyan-500, #00f0ff);
-  border-radius: 8px;
-  width: 90%;
-  max-width: 580px;
-  max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 0 35px rgba(0, 240, 255, 0.25);
-  color: #e2e8f0;
+  align-items: center;
 }
 
-.task-modal-card--lg {
-  max-width: 800px;
-}
-
-.task-modal-header {
+.modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(0, 240, 255, 0.2);
-  background: rgba(0, 240, 255, 0.04);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-.task-modal-title {
-  font-family: var(--font-mono, monospace);
-  font-size: 14px;
-  font-weight: bold;
-  color: var(--cyber-cyan-300, #87eaf2);
+.modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
 }
 
-.task-modal-close {
-  background: none;
+.modal-close-btn {
+  background: transparent;
   border: none;
-  color: #fff;
-  font-size: 18px;
+  color: var(--text-muted);
+  font-size: 16px;
   cursor: pointer;
-  padding: 2px 6px;
-  opacity: 0.7;
-  transition: opacity 0.2s;
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
 }
 
-.task-modal-close:hover {
-  opacity: 1;
+.modal-close-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text-main);
 }
 
-.task-modal-body {
+.modal-body {
   padding: 20px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-}
-
-.task-modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 14px 20px;
-  border-top: 1px solid rgba(0, 240, 255, 0.2);
-  background: rgba(0, 240, 255, 0.02);
-}
-
-.form-row {
-  display: flex;
   gap: 12px;
 }
 
-.flex-1 {
-  flex: 1;
-}
-
-.checkbox-group {
-  margin-top: 6px;
-}
-
-.cyber-checkbox-label {
+.modal-footer {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-family: var(--font-mono, monospace);
-  font-size: 12px;
-  cursor: pointer;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-surface-glass);
 }
 
-.result-instruction-box {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 10px;
-  border-radius: 4px;
-  font-size: 13px;
-}
-
-.result-output-box {
-  background: #060a12;
-  border: 1px solid rgba(0, 240, 255, 0.2);
-  padding: 12px;
-  border-radius: 4px;
-  max-height: 350px;
-  overflow: auto;
+.result-code-box {
+  background: #080d18;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  max-height: 380px;
+  overflow-y: auto;
   font-family: var(--font-mono, monospace);
   font-size: 12px;
-  white-space: pre-wrap;
+  color: #38bdf8;
+  line-height: 1.5;
 }
 </style>

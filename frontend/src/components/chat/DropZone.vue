@@ -8,8 +8,8 @@ defineProps<{
   <div v-if="visible" class="drop-zone-overlay">
     <div class="drop-zone-content">
       <div class="drop-zone-icon">📥</div>
-      <div class="drop-zone-title cyber-text-glow">DROP FILES HERE TO UPLOAD</div>
-      <div class="drop-zone-desc">// Supports .txt, .pdf, .xlsx, .docx, .csv, .json, images</div>
+      <div class="drop-zone-title">Drop files here to upload</div>
+      <div class="drop-zone-desc">Supports documents (.txt, .pdf, .docx, .xlsx, .csv, .json) and images</div>
     </div>
   </div>
 </template>
@@ -21,9 +21,9 @@ defineProps<{
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(3, 31, 42, 0.9);
-  backdrop-filter: blur(4px);
-  border: 2px dashed var(--cyber-cyan-500, #00f0ff);
+  background: rgba(9, 13, 22, 0.88);
+  backdrop-filter: blur(12px);
+  border: 2px dashed var(--accent-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -33,6 +33,7 @@ defineProps<{
 
 .drop-zone-content {
   text-align: center;
+  max-width: 400px;
 }
 
 .drop-zone-icon {
@@ -42,15 +43,14 @@ defineProps<{
 
 .drop-zone-title {
   font-size: 18px;
-  font-weight: bold;
-  font-family: var(--font-mono, monospace);
-  color: var(--cyber-cyan-300, #87eaf2);
+  font-weight: 700;
+  color: var(--text-main);
 }
 
 .drop-zone-desc {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  color: var(--text-muted);
   margin-top: 6px;
-  font-family: var(--font-mono, monospace);
+  line-height: 1.5;
 }
 </style>

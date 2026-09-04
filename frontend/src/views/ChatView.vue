@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
+import { ref, watch, nextTick, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useChatStore } from '../stores/chat';
 import MessageItem from '../components/chat/MessageItem.vue';
@@ -40,6 +40,10 @@ function handleSend(text: string, files: File[], imageDataUrl: string | null) {
 
 function handleStop() {
   chatStore.stopGeneration();
+}
+
+function handlePromptSuggestion(text: string) {
+  chatStore.sendMessage(text, [], null);
 }
 
 function onDragEnter(e: DragEvent) {
@@ -90,24 +94,28 @@ onMounted(() => {
     <!-- DropZone Overlay -->
     <DropZone :visible="isDraggingOver" />
 
-    <!-- Chat Header -->
-    <header class="chat-header cyber-tile--bottom">
+    <!-- Sticky Header -->
+    <header class="chat-header">
       <div class="header-left">
         <div class="system-status" id="system-status">
           <span class="status-pulse-dot"></span>
-          <span class="status-agent-name">{{ (chatStore.currentAgentId || 'main_agent').toUpperCase().replace(/_/g, ' ') }}</span>
-          <span class="status-divider">//</span>
-          <span class="status-state">{{ chatStore.isLoading ? 'PROCESSING...' : chatStore.systemStatus }}</span>
+          <span class="status-agent-name">{{ (chatStore.currentAgentId || 'main_agent').replace(/_/g, ' ') }}</span>
+          <span class="status-divider">/</span>
+          <span class="status-state">{{ chatStore.isLoading ? 'Thinking...' : chatStore.systemStatus }}</span>
           <span v-if="chatStore.activeModelName" class="status-model-tag">{{ chatStore.activeModelName }}</span>
         </div>
       </div>
 
       <div class="header-right">
         <button
-          class="cyber-btn cyber-btn--green"
+          class="btn-primary cyber-btn--sm"
           @click="router.push('/tasks')"
         >
-          📋 TASK MANAGER
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 11l3 3L22 4"></path>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+          </svg>
+          <span>Task Manager</span>
         </button>
       </div>
     </header>
@@ -117,17 +125,36 @@ onMounted(() => {
       v-if="chatStore.isSetupWarningVisible"
       class="cyber-warning-alert"
     >
-      ⚠️ PREVIEW MODE: AI API Key is not configured. Please open
+      <span>⚠️ Preview Mode: AI API Key is not configured. Please open</span>
       <router-link to="/settings" class="alert-link">Settings</router-link>
-      to enter your API key for LLM chat completions.
+      <span>to add your LLM key.</span>
     </div>
 
     <!-- Messages Container -->
     <div ref="messagesContainer" class="chat-messages" id="chatMessages">
+      <!-- Empty State Hero with Quick Prompt Cards -->
       <div v-if="chatStore.messages.length === 0" class="empty-chat-state">
-        <div class="empty-icon">🤖</div>
-        <div class="empty-title cyber-text-glow">RONIN AGENT INITIALIZED</div>
-        <div class="empty-subtitle">// Ready to assist with coding, automation, analysis and tasks.</div>
+        <div class="empty-icon">⚡</div>
+        <div class="empty-title">How can Ronin help you today?</div>
+        <div class="empty-subtitle">Sovereign personal AI agent for coding, automation, research and background tasks.</div>
+
+        <div class="prompt-suggestions-grid">
+          <div class="prompt-suggestion-card" @click="handlePromptSuggestion('Help me write a Python script to automate file organization.')">
+            <div class="prompt-card-icon">💻</div>
+            <div class="prompt-card-title">Write automation code</div>
+            <div class="prompt-card-desc">Generate clean scripts, APIs, or tools.</div>
+          </div>
+          <div class="prompt-suggestion-card" @click="handlePromptSuggestion('Analyze project workspace structure and propose optimizations.')">
+            <div class="prompt-card-icon">🔍</div>
+            <div class="prompt-card-title">Analyze workspace</div>
+            <div class="prompt-card-desc">Inspect codebase, find improvements.</div>
+          </div>
+          <div class="prompt-suggestion-card" @click="handlePromptSuggestion('Create a background task to monitor system performance.')">
+            <div class="prompt-card-icon">📋</div>
+            <div class="prompt-card-title">Schedule agent tasks</div>
+            <div class="prompt-card-desc">Set recurring cron jobs or automations.</div>
+          </div>
+        </div>
       </div>
 
       <MessageItem
@@ -137,7 +164,7 @@ onMounted(() => {
       />
     </div>
 
-    <!-- Typing Indicator -->
+    <!-- Typing / Generating Indicator -->
     <div
       v-if="chatStore.isLoading"
       class="typing-indicator"
@@ -152,14 +179,17 @@ onMounted(() => {
       <button
         type="button"
         class="cyber-btn cyber-btn--red typing-stop-btn"
-        title="STOP AI GENERATION"
+        title="Stop AI Generation"
         @click="handleStop"
       >
-        ⏹ STOP
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+          <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+        </svg>
+        <span>Stop</span>
       </button>
     </div>
 
-    <!-- Input Box -->
+    <!-- Floating Input Dock -->
     <ChatInput
       ref="chatInputRef"
       :is-generating="chatStore.isLoading"
@@ -170,113 +200,53 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.chat-area {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  height: 100vh;
-  overflow: hidden;
-  background: var(--color-bg-main, #070e17);
-}
-
-.chat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  background: rgba(3, 31, 42, 0.6);
-  border-bottom: 1px solid rgba(0, 240, 255, 0.2);
-  z-index: 10;
-}
-
-.system-status {
-  font-family: var(--font-mono, monospace);
-  font-size: 12px;
-  color: var(--cyber-cyan-400, #54d1db);
-  letter-spacing: 1px;
-}
-
 .alert-link {
-  color: var(--cyber-cyan-300, #87eaf2);
-  font-weight: bold;
+  color: var(--text-accent, #38bdf8);
+  font-weight: 600;
   text-decoration: underline;
 }
 
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
+.prompt-suggestions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
+  width: 100%;
+  margin-top: 24px;
 }
 
-.empty-chat-state {
-  margin: auto;
-  text-align: center;
-  padding: 40px;
+.prompt-suggestion-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm), var(--shadow-inner-light);
+  transition: all var(--transition-fast);
 }
 
-.empty-icon {
-  font-size: 54px;
-  margin-bottom: 12px;
+.prompt-suggestion-card:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-bright);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
-.empty-title {
-  font-family: var(--font-mono, monospace);
-  font-size: 16px;
-  font-weight: bold;
-  color: var(--cyber-cyan-300, #87eaf2);
+.prompt-card-icon {
+  font-size: 20px;
+  margin-bottom: 8px;
 }
 
-.empty-subtitle {
-  font-family: var(--font-mono, monospace);
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.5);
-  margin-top: 6px;
+.prompt-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 4px;
 }
 
-.typing-indicator {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 20px;
-  background: rgba(0, 0, 0, 0.4);
-  border-top: 1px solid rgba(0, 240, 255, 0.1);
-  font-family: var(--font-mono, monospace);
-  font-size: 12px;
-  color: var(--cyber-cyan-300, #87eaf2);
-}
-
-.typing-dots {
-  display: flex;
-  gap: 4px;
-}
-
-.typing-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--cyber-cyan-500, #00f0ff);
-  animation: pulse 1.2s infinite ease-in-out;
-}
-
-.typing-dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-.typing-dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-.typing-stop-btn {
-  margin-left: auto;
-  padding: 4px 10px;
-  font-size: 11px;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(0.6); opacity: 0.4; }
-  50% { transform: scale(1.2); opacity: 1; }
+.prompt-card-desc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 </style>
