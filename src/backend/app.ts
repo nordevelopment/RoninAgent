@@ -5,6 +5,7 @@
  */
 
 import Fastify, { FastifyInstance, LogController } from 'fastify';
+import http from 'http';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
@@ -74,7 +75,7 @@ function isLoopbackHost(host: string): boolean {
  */
 export async function buildApp(): Promise<FastifyInstance> {
 
-  const app: FastifyInstance = Fastify({
+  const app = Fastify<http.Server>({
     logger: {
       level: config.LOG_LEVEL || 'info',
       transport: config.ENV !== 'production' ? {
@@ -85,9 +86,11 @@ export async function buildApp(): Promise<FastifyInstance> {
         },
       } : undefined,
     },
-    logController: new (LogController as any)({ disableRequestLogging: true }),
+    ...({
+      logController: new (LogController as any)({ disableRequestLogging: true }),
+    } as any),
     bodyLimit: 20971520, // 20MB
-  } as any);
+  });
 
   try {
     await app.register(cookiePlugin, {
