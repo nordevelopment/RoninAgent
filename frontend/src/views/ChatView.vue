@@ -207,11 +207,11 @@ onMounted(() => {
 }
 
 .prompt-suggestions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  display: flex;
   gap: 12px;
   width: 100%;
   margin-top: 24px;
+  flex-direction: row;
 }
 
 .prompt-suggestion-card {

@@ -758,8 +758,8 @@ body {
 .empty-chat-state {
   margin: auto;
   text-align: center;
-  padding: 40px 20px;
-  max-width: 540px;
+  padding: 30px 20px;
+  max-width: 80%;
   display: flex;
   flex-direction: column;
   align-items: center;
