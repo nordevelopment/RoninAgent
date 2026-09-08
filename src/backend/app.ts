@@ -4,7 +4,7 @@
  * Author: Norayr Petrosyan 
  */
 
-import Fastify, { FastifyInstance } from 'fastify';
+import Fastify, { FastifyInstance, LogController } from 'fastify';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
@@ -74,7 +74,7 @@ function isLoopbackHost(host: string): boolean {
  */
 export async function buildApp(): Promise<FastifyInstance> {
 
-  const app = Fastify({
+  const app: FastifyInstance = Fastify({
     logger: {
       level: config.LOG_LEVEL || 'info',
       transport: config.ENV !== 'production' ? {
@@ -85,9 +85,9 @@ export async function buildApp(): Promise<FastifyInstance> {
         },
       } : undefined,
     },
-    disableRequestLogging: true,
+    logController: new (LogController as any)({ disableRequestLogging: true }),
     bodyLimit: 20971520, // 20MB
-  });
+  } as any);
 
   try {
     await app.register(cookiePlugin, {
