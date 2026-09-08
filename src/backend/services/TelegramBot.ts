@@ -1,7 +1,7 @@
 /**
  * TelegramBot.ts - Telegram Bot Service
- * Author: Norayr Petrosyan
  * Using Telegraf for interaction with Telegram API
+ * Author: Norayr Petrosyan
  */
 
 import type { ChatManager } from '../ai/ChatManager.js';

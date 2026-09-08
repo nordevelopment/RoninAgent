@@ -27,9 +27,9 @@
   "scripts": {
     "predev": "node scripts/check-deps.js",
     "prestart": "node scripts/check-deps.js",
-    "dev:backend": "tsx watch src/backend/server.ts",
+    "dev:backend": "node --watch --watch-path=src/backend --import tsx src/backend/server.ts",
     "dev:frontend": "vite",
-    "dev": "concurrently -k -p \"[{name}]\" -n \"BACKEND,FRONTEND\" -c \"cyan.bold,magenta.bold\" \"tsx watch src/backend/server.ts\" \"vite\"",
+    "dev": "concurrently -k -p \"[{name}]\" -n \"BACKEND,FRONTEND\" -c \"cyan.bold,magenta.bold\" \"node --watch --watch-path=src/backend --import tsx src/backend/server.ts\" \"vite\"",
     "build:backend": "tsc",
     "build:frontend": "vite build",
     "build": "tsc && vite build",

@@ -1,3 +1,9 @@
+/**
+ * app.ts - Web Server Application
+ * Main application build and configuration logic
+ * Author: Norayr Petrosyan 
+ */
+
 import Fastify, { FastifyInstance } from 'fastify';
 import path from 'path';
 import fs from 'fs';

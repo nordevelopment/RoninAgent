@@ -1,5 +1,6 @@
 /**
  * db-reset.ts - Reset and initialize the database
+ * Author: Norayr Petrosyan
  */
 import { DatabaseClient } from './DatabaseClient.js';
 import fs from 'fs';

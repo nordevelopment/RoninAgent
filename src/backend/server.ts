@@ -1,6 +1,7 @@
 /**
  * server.ts - Application entry point
  * Starts the Fastify server
+ * Author: Norayr Petrosyan
  */
 
 import { buildApp } from './app.js';
@@ -18,14 +19,11 @@ async function start() {
     const port = config.PORT;
     const host = config.HOST;
     await app.listen({ port: Number(port), host });
-    console.log(`\x1b[32m[BACKEND READY]\x1b[0m Server running at http://${host}:${port}`);
 
-    // Graceful shutdown
     const gracefulShutdown = async (signal: string) => {
       app.log.info({ signal }, 'Received shutdown signal. Starting graceful shutdown...');
 
       try {
-        // Close server (stop accepting new connections)
         await app.close();
         app.log.info('HTTP server closed. Graceful shutdown completed.');
         process.exit(0);

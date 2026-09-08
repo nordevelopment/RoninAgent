@@ -1,6 +1,6 @@
 /**
  * TaskService.ts - Service for managing and executing background tasks
- * Author: Antigravity AI
+ * Author: Norayr Petrosyan
  */
 
 import { DatabaseClient } from '../database/DatabaseClient.js';

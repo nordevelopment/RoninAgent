@@ -1,6 +1,6 @@
 /**
  * schedule.ts - Utility for calculating task recurrence intervals and CRON schedules
- * Author: Antigravity AI
+ * Author: Norayr Petrosyan
  */
 
 import { CronExpressionParser } from 'cron-parser';

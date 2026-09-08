@@ -1,6 +1,6 @@
 /**
  * TaskModel - Model for managing background tasks
- * Author: Antigravity AI
+ * Author: Norayr Petrosyan
  */
 
 import { DatabaseClient } from '../database/DatabaseClient.js';
@@ -29,7 +29,7 @@ export interface CreateTask {
 }
 
 export class TaskModel {
-  constructor(private db: DatabaseClient) {}
+  constructor(private db: DatabaseClient) { }
 
   /**
    * Create a new task

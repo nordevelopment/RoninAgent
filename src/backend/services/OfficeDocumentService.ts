@@ -1,13 +1,18 @@
+/**
+ * officeDocumentService.ts - Service for creating and processing office documents
+ * Author: Norayr Petrosyan
+ */
+
 import ExcelJS from 'exceljs';
-import { 
-  Document, 
-  Packer, 
-  Paragraph, 
-  TextRun, 
-  HeadingLevel, 
-  AlignmentType, 
-  Table, 
-  TableRow, 
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+  AlignmentType,
+  Table,
+  TableRow,
   TableCell,
   WidthType
 } from 'docx';
@@ -70,7 +75,7 @@ export class OfficeDocumentService {
     const workbook = new ExcelJS.Workbook();
     for (const sheetData of sheets) {
       const sheet = workbook.addWorksheet(sheetData.name || 'Sheet');
-      
+
       if (sheetData.columns && sheetData.columns.length > 0) {
         sheet.columns = sheetData.columns.map(col => ({
           header: col.header,
@@ -78,11 +83,11 @@ export class OfficeDocumentService {
           width: col.width || 15
         }));
       }
-      
+
       if (sheetData.rows && sheetData.rows.length > 0) {
         sheet.addRows(sheetData.rows);
       }
-      
+
       // Header row styling if exists
       const headerRow = sheet.getRow(1);
       if (headerRow.cellCount > 0) {
@@ -96,7 +101,7 @@ export class OfficeDocumentService {
         headerRow.height = 24;
       }
     }
-    
+
     await workbook.xlsx.writeFile(outputPath);
   }
 
@@ -145,7 +150,7 @@ export class OfficeDocumentService {
       const tableRows: TableRow[] = [];
 
       if (headerRow) {
-        const headerCells = headerRow.map(h => 
+        const headerCells = headerRow.map(h =>
           new TableCell({
             children: [new Paragraph({
               children: [new TextRun({ text: h, bold: true, color: 'FFFFFF' })],
@@ -158,7 +163,7 @@ export class OfficeDocumentService {
       }
 
       for (const row of bodyRows) {
-        const cells = row.map(cellText => 
+        const cells = row.map(cellText =>
           new TableCell({
             children: [new Paragraph({ children: this.parseInlineTextRuns(cellText) })],
             margins: { top: 100, bottom: 100, left: 150, right: 150 }
@@ -276,8 +281,8 @@ export class OfficeDocumentService {
         for (const item of input.paragraphs) {
           if ('type' in item && item.type === 'table') {
             const tableRows: TableRow[] = [];
-            
-            const headerCells = item.headers.map(h => 
+
+            const headerCells = item.headers.map(h =>
               new TableCell({
                 children: [new Paragraph({
                   children: [new TextRun({ text: h, bold: true, color: 'FFFFFF' })],
@@ -289,7 +294,7 @@ export class OfficeDocumentService {
             tableRows.push(new TableRow({ children: headerCells }));
 
             for (const rowData of item.rows) {
-              const rowCells = rowData.map(cellText => 
+              const rowCells = rowData.map(cellText =>
                 new TableCell({
                   children: [new Paragraph({ text: cellText })],
                   margins: { top: 100, bottom: 100, left: 150, right: 150 }
@@ -376,7 +381,7 @@ export class OfficeDocumentService {
     await workbook.xlsx.readFile(filePath);
 
     const maxRows = options?.limitRows || 100;
-    const sheetsToRead = options?.sheetName 
+    const sheetsToRead = options?.sheetName
       ? workbook.worksheets.filter(s => s.name.toLowerCase() === options.sheetName!.toLowerCase())
       : workbook.worksheets;
 
@@ -514,7 +519,7 @@ export class OfficeDocumentService {
 
       return `${header}${textResult.text.trim()}`;
     } finally {
-      await parser.destroy().catch(() => {});
+      await parser.destroy().catch(() => { });
     }
   }
 }

@@ -1,5 +1,6 @@
 /**
- * Memory - Модель памяти
+ * Memory - Model
+ * Author: Norayr Petrosyan
  */
 
 export type MemoryCategory = 'personal' | 'preference' | 'fact' | 'context';
@@ -32,7 +33,7 @@ export interface UpdateMemoryDTO {
 import { DatabaseClient } from '../database/DatabaseClient.js';
 
 export class Memory {
-  constructor(private db: DatabaseClient) {}
+  constructor(private db: DatabaseClient) { }
 
   /**
    * Создать память

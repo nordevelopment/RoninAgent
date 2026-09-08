@@ -1,3 +1,8 @@
+/**
+ * EnV Helper - Helper functions for managing environment variables
+ * Author: Norayr Petrosyan
+ */
+
 import fs from 'fs';
 
 /**
@@ -18,7 +23,7 @@ export function updateEnvFile(filePath: string, updates: Record<string, string>)
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    
+
     // Skip empty lines and comments
     if (!line || line.startsWith('#') || !line.includes('=')) {
       continue;

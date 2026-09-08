@@ -1,3 +1,8 @@
+/**
+ * Web Page Content Service - Fetches and processes web page content
+Author: Norayr Petrosyan
+*/
+
 import axios from "axios";
 import * as cheerio from "cheerio";
 import { browserService } from "./BrowserService.js";
@@ -66,7 +71,7 @@ export class WebPageContent {
                             if (baseUrl && (href.startsWith('/') || !href.startsWith('http'))) {
                                 try {
                                     href = new URL(href, baseUrl).href;
-                                } catch (e) {}
+                                } catch (e) { }
                             }
                             const label = childContent || $(child).attr('title') || $(child).attr('aria-label') || href;
                             text += ` [${label}](${href}) `;

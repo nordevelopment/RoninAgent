@@ -1,5 +1,6 @@
 /**
  * OpenRouterService.ts - Fetches and caches live model list with pricing from OpenRouter API
+ * Author: Norayr Petrosyan
  */
 
 export interface OpenRouterModelPricing {

@@ -1,5 +1,6 @@
 /**
  * ai_providers.ts - Pre-configured AI Provider Presets
+ * Author: Norayr Petrosyan
  */
 
 export interface AIProvider {
