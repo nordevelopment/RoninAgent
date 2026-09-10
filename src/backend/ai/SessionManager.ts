@@ -72,6 +72,15 @@ export class SessionManager {
    * Update session title
    */
   async updateSessionTitle(sessionId: string, title: string): Promise<number> {
-    return await this.sessionModel.updateTitle(sessionId, title);
+    let clean = title.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    clean = clean.replace(/^["'`*#\s]+|["'`*#\s]+$/g, '');
+    const lines = clean.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.startsWith('-'));
+    if (lines.length > 0) {
+      clean = lines[lines.length - 1];
+    }
+    if (clean.length > 35) {
+      clean = clean.slice(0, 32).trim() + '...';
+    }
+    return await this.sessionModel.updateTitle(sessionId, clean || 'Chat Session');
   }
 }

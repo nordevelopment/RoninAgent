@@ -399,17 +399,27 @@ export class AIClient {
       const data = response.data;
 
       const message = data.choices?.[0]?.message;
-      const reasoning = message?.reasoning_content || message?.reasoning || undefined;
+      let reasoning = message?.reasoning_content || message?.reasoning || undefined;
+      let content = message?.content || '';
+
+      // Extract inline <think>...</think> if reasoning model puts thought trace inside content
+      const thinkMatch = content.match(/<think>([\s\S]*?)<\/think>/i);
+      if (thinkMatch) {
+        if (!reasoning) {
+          reasoning = thinkMatch[1].trim();
+        }
+        content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+      }
 
       // If there is no text, no function calls, no reasoning, then there is trouble
-      if (!message?.content && (!message?.tool_calls || message.tool_calls.length === 0) && !reasoning) {
+      if (!content && (!message?.tool_calls || message.tool_calls.length === 0) && !reasoning) {
         return {
           content: 'Error: AI response not received',
         };
       }
 
       return {
-        content: message?.content || '', // Empty string is ok if there are tool calls
+        content: content,
         toolCalls: message?.tool_calls || undefined,
         reasoning: reasoning,
       };

@@ -51,6 +51,17 @@ function saveRename(id: string) {
   editingSessionId.value = null;
 }
 
+function formatTitle(raw?: string): string {
+  if (!raw) return 'New Chat';
+  let clean = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  clean = clean.replace(/^["'`*#\s]+|["'`*#\s]+$/g, '');
+  const lines = clean.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.startsWith('-'));
+  if (lines.length > 0) {
+    clean = lines[lines.length - 1];
+  }
+  return clean || raw;
+}
+
 function cancelRename() {
   editingSessionId.value = null;
 }
@@ -194,8 +205,8 @@ function navigateTo(path: string) {
 
         <!-- Normal Session Row -->
         <template v-else>
-          <span class="session-label-text" :title="s.title">
-            {{ s.title || s.id }}
+          <span class="session-label-text" :title="formatTitle(s.title)">
+            {{ formatTitle(s.title) }}
           </span>
           <div class="session-actions-group">
             <button

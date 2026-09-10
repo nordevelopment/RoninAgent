@@ -283,7 +283,7 @@ export class ChatManager {
                   .map(m => `${m.role === 'user' ? 'User' : 'Agent'}: ${typeof m.content === 'string' ? m.content : JSON.stringify(m.content)}`)
                   .join('\n');
 
-                const prompt = `Based on the following beginning of a chat session, generate a short, descriptive title of 2 to 4 words in the user's language. Respond ONLY with the title. Do not include quotes, markdown formatting, or any extra text.
+                const prompt = `Based on the following beginning of a chat session, generate a short, descriptive title of 2 to 4 words in the user's language. Do NOT think out loud. Respond ONLY with the title itself. No quotes, no markdown, no explanations.
 
 Chat Beginning:
 ${chatText}
@@ -291,7 +291,28 @@ ${chatText}
 Title:`;
 
                 const titleResponse = await this.aiClient.sendMessage([{ role: 'user', content: prompt }], agentId, undefined, undefined, true);
-                const title = titleResponse.content ? titleResponse.content.trim().replace(/^["']|["']$/g, '') : '';
+                let title = titleResponse.content ? titleResponse.content.trim() : '';
+
+                // Strip any thinking tags if present
+                title = title.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+                // If multiline, take the final concise title line
+                const titleLines = title.split('\n')
+                  .map(l => l.trim())
+                  .filter(l => l.length > 0 && !l.startsWith('-') && !l.startsWith('*') && !l.toLowerCase().startsWith('possible'));
+                if (titleLines.length > 0) {
+                  title = titleLines[titleLines.length - 1];
+                }
+
+                // Clean quotes, Markdown symbols, and "Title:" prefix
+                title = title.replace(/^["'`*#\s]+|["'`*#\s]+$/g, '');
+                title = title.replace(/^Title:\s*/i, '').trim();
+
+                // Cap length to 32 characters max
+                if (title.length > 32) {
+                  title = title.slice(0, 30).trim() + '...';
+                }
+
                 if (title && title.length > 0 && !title.startsWith('Error:')) {
                   await this.sessionManager.updateSessionTitle(sessionId, title);
                 }
