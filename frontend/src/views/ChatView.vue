@@ -5,6 +5,7 @@ import { useChatStore } from '../stores/chat';
 import MessageItem from '../components/chat/MessageItem.vue';
 import ChatInput from '../components/chat/ChatInput.vue';
 import DropZone from '../components/chat/DropZone.vue';
+import ChatCapabilities from '../components/chat/ChatCapabilities.vue';
 
 const router = useRouter();
 const chatStore = useChatStore();
@@ -40,10 +41,6 @@ function handleSend(text: string, files: File[], imageDataUrl: string | null) {
 
 function handleStop() {
   chatStore.stopGeneration();
-}
-
-function handlePromptSuggestion(text: string) {
-  chatStore.sendMessage(text, [], null);
 }
 
 function onDragEnter(e: DragEvent) {
@@ -132,30 +129,8 @@ onMounted(() => {
 
     <!-- Messages Container -->
     <div ref="messagesContainer" class="chat-messages" id="chatMessages">
-      <!-- Empty State Hero with Quick Prompt Cards -->
-      <div v-if="chatStore.messages.length === 0" class="empty-chat-state">
-        <div class="empty-icon">⚡</div>
-        <div class="empty-title">How can Ronin help you today?</div>
-        <div class="empty-subtitle">Sovereign personal AI agent for coding, automation, research and background tasks.</div>
-
-        <div class="prompt-suggestions-grid">
-          <div class="prompt-suggestion-card" @click="handlePromptSuggestion('Help me write a Python script to automate file organization.')">
-            <div class="prompt-card-icon">💻</div>
-            <div class="prompt-card-title">Write automation code</div>
-            <div class="prompt-card-desc">Generate clean scripts, APIs, or tools.</div>
-          </div>
-          <div class="prompt-suggestion-card" @click="handlePromptSuggestion('Analyze project workspace structure and propose optimizations.')">
-            <div class="prompt-card-icon">🔍</div>
-            <div class="prompt-card-title">Analyze workspace</div>
-            <div class="prompt-card-desc">Inspect codebase, find improvements.</div>
-          </div>
-          <div class="prompt-suggestion-card" @click="handlePromptSuggestion('Create a background task to monitor system performance.')">
-            <div class="prompt-card-icon">📋</div>
-            <div class="prompt-card-title">Schedule agent tasks</div>
-            <div class="prompt-card-desc">Set recurring cron jobs or automations.</div>
-          </div>
-        </div>
-      </div>
+      <!-- Empty State Hero with Agent Capabilities Showcase -->
+      <ChatCapabilities v-if="chatStore.messages.length === 0" />
 
       <MessageItem
         v-for="msg in chatStore.messages"
@@ -206,47 +181,4 @@ onMounted(() => {
   text-decoration: underline;
 }
 
-.prompt-suggestions-grid {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-  margin-top: 24px;
-  flex-direction: row;
-}
-
-.prompt-suggestion-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: 14px 16px;
-  text-align: left;
-  cursor: pointer;
-  box-shadow: var(--shadow-sm), var(--shadow-inner-light);
-  transition: all var(--transition-fast);
-}
-
-.prompt-suggestion-card:hover {
-  background: var(--bg-elevated);
-  border-color: var(--border-bright);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.prompt-card-icon {
-  font-size: 20px;
-  margin-bottom: 8px;
-}
-
-.prompt-card-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-main);
-  margin-bottom: 4px;
-}
-
-.prompt-card-desc {
-  font-size: 11.5px;
-  color: var(--text-muted);
-  line-height: 1.4;
-}
 </style>

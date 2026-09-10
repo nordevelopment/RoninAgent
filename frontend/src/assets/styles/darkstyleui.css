@@ -793,9 +793,9 @@ body {
 }
 
 .empty-subtitle {
-  font-size: 13.5px;
+  font-size: 1rem;
   color: var(--text-muted);
-  line-height: 1.6;
+  line-height: 1.4;
 }
 
 /* Message Bubble Styles */
@@ -803,7 +803,7 @@ body {
   display: flex;
   flex-direction: column;
   width: 100%;
-  font-size: 14px;
+  font-size: 1rem;
   line-height: 1.65;
   animation: message-fade 0.2s var(--transition-spring);
 }
