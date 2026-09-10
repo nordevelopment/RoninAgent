@@ -146,13 +146,13 @@ RoninAgent includes built-in security features to protect your server, files, an
 https://www.youtube.com/watch?v=rcRkP_UiDRo
 
 ## 📸 Screenshots
-<img width="1516" height="916" alt="Image" src="https://github.com/user-attachments/assets/bf8ba19e-c3ba-49ca-b813-4e68f3c9ef11" />
+<img width="1551" height="949" alt="Image" src="https://github.com/user-attachments/assets/df88f8b4-8dde-458d-8459-30d42861a2e5" />
 
-<img width="1508" height="925" alt="Image" src="https://github.com/user-attachments/assets/52193bb6-4492-4e95-a0cb-5c059f191b8b" />
+<img width="1562" height="948" alt="Image" src="https://github.com/user-attachments/assets/0ad13406-844b-4bd0-86a6-38d4825e94a1" />
 
-<img width="1361" height="911" alt="Image" src="https://github.com/user-attachments/assets/cbdcec8a-f5a7-40c3-8455-dadbad699310" />
+<img width="1543" height="950" alt="Image" src="https://github.com/user-attachments/assets/5a757879-87b8-4562-8048-8ead2b29caac" />
 
-<img width="1491" height="736" alt="Image" src="https://github.com/user-attachments/assets/5c351b63-37e8-457d-b420-46b8c155e9a4" />
+<img width="1552" height="955" alt="Image" src="https://github.com/user-attachments/assets/ea03ae6b-7394-4e57-9a34-b2e3a7d0cfd1" />
 
 ---
 
