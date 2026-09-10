@@ -30,10 +30,10 @@ onMounted(async () => {
 });
 
 function syncFromStore() {
-  providerSelect.value = settingsStore.aiProvider;
-  apiUrl.value = settingsStore.aiApiUrl;
-  defaultModel.value = settingsStore.aiDefaultModel;
-  selectedModelFromList.value = settingsStore.aiDefaultModel;
+  providerSelect.value = settingsStore.aiProvider || 'openrouter';
+  apiUrl.value = settingsStore.aiApiUrl || 'https://openrouter.ai/api/v1/chat/completions';
+  defaultModel.value = settingsStore.aiDefaultModel || 'qwen/qwen3.5-flash-02-23';
+  selectedModelFromList.value = defaultModel.value;
   telegramToken.value = '';
   allowedTelegramUserIds.value = settingsStore.allowedTelegramUserIds;
   appUser.value = settingsStore.appUser;
@@ -43,12 +43,31 @@ function syncFromStore() {
   xaiApiKey.value = '';
 }
 
+const selectedProvider = computed(() => {
+  return settingsStore.providers.find((p) => p.id === providerSelect.value);
+});
+
+const availablePopularModels = computed(() => {
+  if (providerSelect.value === 'openrouter') {
+    return settingsStore.openRouterModels.map((m) => ({ id: m.id, name: m.name || m.id }));
+  }
+  const p = selectedProvider.value;
+  if (p && p.popularModels && p.popularModels.length > 0) {
+    return p.popularModels.map((m) => ({ id: m, name: m }));
+  }
+  return [];
+});
+
 function onProviderSelectChange() {
-  const p = settingsStore.providers.find((item) => item.id === providerSelect.value);
+  const p = selectedProvider.value;
   if (p) {
-    apiUrl.value = p.url;
-    defaultModel.value = p.defaultModel;
-    selectedModelFromList.value = p.defaultModel;
+    if (p.id !== 'custom') {
+      apiUrl.value = p.baseUrl || p.url || '';
+      defaultModel.value = p.defaultModel;
+      selectedModelFromList.value = p.defaultModel;
+    } else {
+      selectedModelFromList.value = '';
+    }
   }
 }
 
@@ -59,7 +78,7 @@ function onModelSelectChange() {
 }
 
 function onDefaultModelInput() {
-  const matched = settingsStore.openRouterModels.find((m) => m.id === defaultModel.value.trim());
+  const matched = availablePopularModels.value.find((m) => m.id === defaultModel.value.trim());
   if (matched) {
     selectedModelFromList.value = matched.id;
   } else {
@@ -68,6 +87,7 @@ function onDefaultModelInput() {
 }
 
 const currentModelPrice = computed(() => {
+  if (providerSelect.value !== 'openrouter') return null;
   const matched = settingsStore.openRouterModels.find((m) => m.id === defaultModel.value.trim());
   if (!matched || !matched.pricing) return null;
   const pIn = parseFloat(matched.pricing.prompt || '0') * 1000000;
@@ -141,7 +161,6 @@ async function handleSave() {
               <option v-for="p in settingsStore.providers" :key="p.id" :value="p.id">
                 {{ p.name }}
               </option>
-              <option value="custom">⚙️ Custom Endpoint</option>
             </select>
           </div>
 
@@ -151,7 +170,7 @@ async function handleSave() {
               v-model="apiUrl"
               type="text"
               class="form-input"
-              placeholder="https://openrouter.ai/api/v1"
+              placeholder="https://openrouter.ai/api/v1/chat/completions"
             />
           </div>
 
@@ -168,8 +187,11 @@ async function handleSave() {
             />
           </div>
 
-          <div v-if="settingsStore.openRouterModels.length > 0" class="form-group">
-            <label class="form-label">Select Popular Model</label>
+          <div v-if="availablePopularModels.length > 0" class="form-group">
+            <label class="form-label">
+              <span>Select Popular Model</span>
+              <span v-if="providerSelect === 'openrouter'" class="field-hint" style="margin-left: 8px; font-weight: normal;">(OpenRouter Live)</span>
+            </label>
             <select
               v-model="selectedModelFromList"
               class="cyber-select"
@@ -177,11 +199,11 @@ async function handleSave() {
             >
               <option value="">-- Or type custom model identifier below --</option>
               <option
-                v-for="m in settingsStore.openRouterModels"
+                v-for="m in availablePopularModels"
                 :key="m.id"
                 :value="m.id"
               >
-                {{ m.name || m.id }}
+                {{ m.name }}
               </option>
             </select>
           </div>

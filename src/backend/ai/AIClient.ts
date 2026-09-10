@@ -54,7 +54,7 @@ export class AIClient {
     return config.AI_API_KEY;
   }
   get apiUrl(): string {
-    return config.AI_API_URL || '';
+    return config.AI_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
   }
   get model(): string {
     return config.AI_DEFAULT_MODEL;

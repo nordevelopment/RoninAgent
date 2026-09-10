@@ -15,7 +15,7 @@ export const config = {
   APP_USER: process.env.APP_USER || 'admin',
   APP_PASSWORD: process.env.APP_PASSWORD || '',
   AI_API_KEY: process.env.AI_API_KEY || '',
-  AI_API_URL: process.env.AI_API_URL || '',
+  AI_API_URL: (process.env.AI_API_URL && process.env.AI_API_URL.trim()) || 'https://openrouter.ai/api/v1/chat/completions',
   AI_DEFAULT_MODEL: process.env.AI_DEFAULT_MODEL || 'qwen/qwen3.5-flash-02-23',
   AI_EMBEDDING_MODEL: process.env.AI_EMBEDDING_MODEL || 'Qwen/Qwen3-Embedding-8B',
   AI_EMBEDDING_DIM: parseInt(process.env.AI_EMBEDDING_DIM || '4096'),
@@ -55,14 +55,14 @@ if (fs.existsSync(configJsonPath)) {
     const raw = fs.readFileSync(configJsonPath, 'utf-8');
     if (raw.trim()) {
       const parsed = JSON.parse(raw);
-      if (parsed.ai_api_key) {
-        config.AI_API_KEY = parsed.ai_api_key;
+      if (parsed.ai_api_key && parsed.ai_api_key.trim()) {
+        config.AI_API_KEY = parsed.ai_api_key.trim();
       }
-      if (parsed.ai_api_url) {
-        config.AI_API_URL = parsed.ai_api_url;
+      if (parsed.ai_api_url && parsed.ai_api_url.trim()) {
+        config.AI_API_URL = parsed.ai_api_url.trim();
       }
-      if (parsed.ai_default_model) {
-        config.AI_DEFAULT_MODEL = parsed.ai_default_model;
+      if (parsed.ai_default_model && parsed.ai_default_model.trim()) {
+        config.AI_DEFAULT_MODEL = parsed.ai_default_model.trim();
       }
       if (parsed.telegram_bot_token) {
         config.TELEGRAM_BOT_TOKEN = parsed.telegram_bot_token;

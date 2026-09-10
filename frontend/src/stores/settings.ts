@@ -4,8 +4,13 @@ import { ref } from 'vue';
 export interface ProviderOption {
   id: string;
   name: string;
-  url: string;
+  baseUrl?: string;
+  url?: string;
   defaultModel: string;
+  popularModels?: string[];
+  requiresApiKey?: boolean;
+  isOpenAICompatible?: boolean;
+  description?: string;
 }
 
 export interface OpenRouterModelItem {
@@ -24,7 +29,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const saveStatus = ref<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const aiProvider = ref<string>('openrouter');
-  const aiApiUrl = ref<string>('https://openrouter.ai/api/v1');
+  const aiApiUrl = ref<string>('https://openrouter.ai/api/v1/chat/completions');
   const aiApiKey = ref<string>('');
   const hasAiApiKey = ref<boolean>(false);
   const aiDefaultModel = ref<string>('qwen/qwen3.5-flash-02-23');
@@ -54,8 +59,8 @@ export const useSettingsStore = defineStore('settings', () => {
       if (res.ok) {
         const data = await res.json();
         providers.value = data.providers || [];
-        aiApiUrl.value = data.aiApiUrl || 'https://openrouter.ai/api/v1';
-        aiDefaultModel.value = data.aiDefaultModel || 'qwen/qwen3.5-flash-02-23';
+        aiApiUrl.value = (data.aiApiUrl && data.aiApiUrl.trim()) || 'https://openrouter.ai/api/v1/chat/completions';
+        aiDefaultModel.value = (data.aiDefaultModel && data.aiDefaultModel.trim()) || 'qwen/qwen3.5-flash-02-23';
         hasAiApiKey.value = !!data.hasAiApiKey;
         hasTelegramBotToken.value = !!data.hasTelegramBotToken;
         allowedTelegramUserIds.value = data.allowedTelegramUserIds || '';
@@ -76,11 +81,23 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   function syncProviderFromUrl() {
-    const matched = providers.value.find(
-      (p) => p.url.trim().replace(/\/+$/, '') === aiApiUrl.value.trim().replace(/\/+$/, '')
-    );
+    const currentUrl = (aiApiUrl.value || '').trim().replace(/\/+$/, '');
+    if (!currentUrl) {
+      aiProvider.value = 'openrouter';
+      const openRouterPreset = providers.value.find((p) => p.id === 'openrouter');
+      aiApiUrl.value = openRouterPreset?.baseUrl || openRouterPreset?.url || 'https://openrouter.ai/api/v1/chat/completions';
+      return;
+    }
+
+    const matched = providers.value.find((p) => {
+      const pUrl = (p.baseUrl || p.url || '').trim().replace(/\/+$/, '');
+      return pUrl && pUrl === currentUrl;
+    });
+
     if (matched) {
       aiProvider.value = matched.id;
+    } else if (currentUrl.includes('openrouter.ai')) {
+      aiProvider.value = 'openrouter';
     } else {
       aiProvider.value = 'custom';
     }

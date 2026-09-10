@@ -58,7 +58,7 @@
   /* Soft Aquamarine White */
   --text-muted: #94a3b8;
   /* Slate / Muted Cyan */
-  --text-faint: #4b6a78;
+  --text-faint: #6ba7c2;
   /* Deep Ocean Blue-Gray */
   --text-accent: #22d3ee;
   /* Electric Cyan 400 */
@@ -131,7 +131,7 @@
   --text-main: #042f2e;
   --text-body: #134e4a;
   --text-muted: #475569;
-  --text-faint: #94a3b8;
+  --text-faint: #516978;
   --text-accent: #0891b2;
 
   --border-subtle: rgba(13, 148, 136, 0.08);
@@ -1250,7 +1250,7 @@ body {
 }
 
 .field-hint {
-  font-size: 11px;
+  font-size: 0.9rem;
   color: var(--text-faint);
   margin-top: 4px;
 }
