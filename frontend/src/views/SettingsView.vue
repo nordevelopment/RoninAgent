@@ -23,6 +23,15 @@ const togetherImageModel = ref('');
 
 const xaiApiKey = ref('');
 
+interface ProviderDraft {
+  apiUrl: string;
+  apiKey: string;
+  defaultModel: string;
+}
+
+const providerDrafts = ref<Record<string, ProviderDraft>>({});
+const previousProvider = ref<string>('openrouter');
+
 onMounted(async () => {
   await settingsStore.fetchSettings();
   syncFromStore();
@@ -30,10 +39,29 @@ onMounted(async () => {
 });
 
 function syncFromStore() {
-  providerSelect.value = settingsStore.aiProvider || 'openrouter';
+  const currentP = settingsStore.aiProvider || 'openrouter';
+  providerSelect.value = currentP;
+  previousProvider.value = currentP;
+
   apiUrl.value = settingsStore.aiApiUrl || 'https://openrouter.ai/api/v1/chat/completions';
   defaultModel.value = settingsStore.aiDefaultModel || 'qwen/qwen3.5-flash-02-23';
   selectedModelFromList.value = defaultModel.value;
+  apiKey.value = '';
+
+  providerDrafts.value[currentP] = {
+    apiUrl: apiUrl.value,
+    apiKey: apiKey.value,
+    defaultModel: defaultModel.value,
+  };
+
+  if (currentP !== 'custom' && !providerDrafts.value['custom']) {
+    providerDrafts.value['custom'] = {
+      apiUrl: '',
+      apiKey: '',
+      defaultModel: '',
+    };
+  }
+
   telegramToken.value = '';
   allowedTelegramUserIds.value = settingsStore.allowedTelegramUserIds;
   appUser.value = settingsStore.appUser;
@@ -59,14 +87,43 @@ const availablePopularModels = computed(() => {
 });
 
 function onProviderSelectChange() {
+  // 1. Save current form values to previous provider draft
+  if (previousProvider.value) {
+    providerDrafts.value[previousProvider.value] = {
+      apiUrl: apiUrl.value,
+      apiKey: apiKey.value,
+      defaultModel: defaultModel.value,
+    };
+  }
+
+  const newP = providerSelect.value;
+  previousProvider.value = newP;
   const p = selectedProvider.value;
-  if (p) {
-    if (p.id !== 'custom') {
-      apiUrl.value = p.baseUrl || p.url || '';
-      defaultModel.value = p.defaultModel;
-      selectedModelFromList.value = p.defaultModel;
+  const draft = providerDrafts.value[newP];
+
+  // 2. Load draft or clean/preset values for new provider
+  if (newP === 'custom') {
+    if (draft && (draft.apiUrl || draft.apiKey || draft.defaultModel)) {
+      apiUrl.value = draft.apiUrl;
+      apiKey.value = draft.apiKey;
+      defaultModel.value = draft.defaultModel;
     } else {
-      selectedModelFromList.value = '';
+      apiUrl.value = '';
+      apiKey.value = '';
+      defaultModel.value = '';
+    }
+    selectedModelFromList.value = '';
+  } else {
+    if (draft && (draft.apiUrl || draft.defaultModel)) {
+      apiUrl.value = draft.apiUrl;
+      apiKey.value = draft.apiKey;
+      defaultModel.value = draft.defaultModel;
+      selectedModelFromList.value = draft.defaultModel;
+    } else if (p) {
+      apiUrl.value = p.baseUrl || p.url || '';
+      defaultModel.value = p.defaultModel || '';
+      selectedModelFromList.value = p.defaultModel || '';
+      apiKey.value = '';
     }
   }
 }
@@ -111,6 +168,12 @@ async function handleSave() {
   if (xaiApiKey.value.trim()) payload.xaiApiKey = xaiApiKey.value.trim();
 
   await settingsStore.saveSettings(payload);
+  apiKey.value = '';
+  providerDrafts.value[providerSelect.value] = {
+    apiUrl: apiUrl.value,
+    apiKey: '',
+    defaultModel: defaultModel.value,
+  };
 }
 </script>
 
@@ -170,20 +233,20 @@ async function handleSave() {
               v-model="apiUrl"
               type="text"
               class="form-input"
-              placeholder="https://openrouter.ai/api/v1/chat/completions"
+              :placeholder="providerSelect === 'custom' ? 'e.g. http://localhost:8000/v1/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions'"
             />
           </div>
 
           <div class="form-group">
             <label class="form-label">
               <span>API Key</span>
-              <span v-if="settingsStore.hasAiApiKey" class="configured-tag">✓ Configured</span>
+              <span v-if="settingsStore.hasAiApiKey && providerSelect === settingsStore.aiProvider" class="configured-tag">✓ Configured</span>
             </label>
             <input
               v-model="apiKey"
               type="password"
               class="form-input"
-              :placeholder="settingsStore.hasAiApiKey ? '•••••••• (leave empty to keep unchanged)' : 'Enter API Key'"
+              :placeholder="(settingsStore.hasAiApiKey && providerSelect === settingsStore.aiProvider) ? '•••••••• (leave empty to keep unchanged)' : (providerSelect === 'custom' ? 'Enter API Key (or leave empty if not required)' : 'Enter API Key')"
             />
           </div>
 
@@ -217,7 +280,7 @@ async function handleSave() {
               v-model="defaultModel"
               type="text"
               class="form-input"
-              placeholder="e.g. qwen/qwen3.5-flash-02-23"
+              :placeholder="providerSelect === 'custom' ? 'e.g. my-custom-model-id' : 'e.g. qwen/qwen3.5-flash-02-23'"
               @input="onDefaultModelInput"
             />
           </div>
