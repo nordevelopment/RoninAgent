@@ -1,6 +1,7 @@
 /**
  * server.ts - Application entry point
  * Starts the Fastify server
+ * Author: Norayr Petrosyan
  */
 
 import { buildApp } from './app.js';
@@ -18,14 +19,11 @@ async function start() {
     const port = config.PORT;
     const host = config.HOST;
     await app.listen({ port: Number(port), host });
-    // app.log.info(`Server running at http://${host}:${port}`);
 
-    // Graceful shutdown
     const gracefulShutdown = async (signal: string) => {
       app.log.info({ signal }, 'Received shutdown signal. Starting graceful shutdown...');
 
       try {
-        // Close server (stop accepting new connections)
         await app.close();
         app.log.info('HTTP server closed. Graceful shutdown completed.');
         process.exit(0);
@@ -40,6 +38,7 @@ async function start() {
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
   } catch (err) {
+    console.error('[BACKEND FATAL ERROR]', err);
     logger.error({ err }, 'Failed to start server');
     process.exit(1);
   }

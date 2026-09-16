@@ -1,4 +1,6 @@
-Keywords: temu, тему, тему ком, buy on temu, товары temu, temu.com, temu deals
+Phrases: на тему, на temu, купить на тему, товары на temu, товары на тему, поиск на temu, temu.com, temu deals, buy on temu
+Combinations: найди, сравни, покажи, поищи, закажи, купи | temu, тему
+Keywords: temu.com
 
 When searching or analyzing products on Temu:
 

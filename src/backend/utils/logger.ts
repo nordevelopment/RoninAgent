@@ -1,3 +1,9 @@
+
+/**
+ * Logger utility for logging messages to the console with different log levels.
+ * Author: Norayr Petrosyan
+ */
+
 import pino from 'pino';
 import { config } from '../config.js';
 

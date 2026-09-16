@@ -1,4 +1,6 @@
-Keywords: wildberries, wb, вайлдберриз, вайлдберис, вб, товары wb, wildberries.am, wildberries.ru
+Phrases: на вайлдберриз, на вайлдберис, на вб, на wb, товары на вайлдберриз, товары на вб, купить на вайлдберриз, wildberries.am, wildberries.ru, поиск на вайлдберриз, поиск на вб
+Combinations: найди, сравни, покажи, поищи, закажи, купи | вайлдберриз, вайлдберис, вб, wb, wildberries
+Keywords: wildberries.am, wildberries.ru
 
 When searching or analyzing products on Wildberries:
 
@@ -26,4 +28,3 @@ When searching or analyzing products on Wildberries:
 4. **STRICT NO-HALLUCINATION RULE**:
    - NEVER invent fictional prices, fake article numbers, or non-existent products.
    - If a specific query fails, retry with a broader query (e.g., `https://www.wildberries.am/catalog/0/search.aspx?search=микрофон+fifine`).
-

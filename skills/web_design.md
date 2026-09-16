@@ -1,4 +1,6 @@
-Keywords: дизайн, лендинг, верстка, web_design, landing, UI, UX, CSS, HTML, сайт, вебдизайн, веб-дизайн, интерфейс, frontend, portfolio, landing page, website
+Phrases: дизайн лендинга, дизайн сайта, сверстай сайт, создай лендинг, разработай лендинг, дизайн интерфейса, ui/ux дизайн, web design, landing page design
+Combinations: разработай, создай, сверстай, сделай, нарисуй, спроектируй | лендинг, веб-сайт, интерфейс, landing page, верстку, дизайн сайта
+Keywords: web_design, landingpage
 
 # SKILL: Adaptive UI/UX & Web Design Architect
 
@@ -22,23 +24,3 @@ When asked to design web pages, landing pages, websites, or user interfaces, dyn
 - **Depth & Polish:** Use modern CSS techniques: glassmorphism (`backdrop-filter: blur()`), subtle border glows, refined box-shadows, layered background radial gradients and grid overlays.
 - **Micro-Interactions:** Add smooth transitions (`transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);`), hover lifts (`transform: translateY(-4px)`), button glow effects, and interactive feedback.
 - **Flawless Responsiveness:** Design mobile-friendly layouts using CSS Flexbox and Grid with flexible breakpoints (`@media (max-width: 768px)`).
-
-## 3. Mandatory Comprehensive Section Blueprint (No Short/Skimpy Pages!)
-Every landing page must be a **rich, comprehensive, production-grade page with at least 6-8 distinct, well-developed sections**. Never output a brief 3-4 block summary. Always include:
-1. **Sticky / Fixed Navigation Bar:** Logo/Brand, anchor links to page sections, and a prominent CTA button.
-2. **High-Impact Hero Section:** Bold value proposition headline, subtitle, dual CTAs, and floating proof metrics/stats (e.g., 13+ Years, 100+ Projects, 99.9% Uptime).
-3. **Core Services / Solutions Matrix:** Detailed multi-column cards with descriptive subheadings, feature checkmarks, and concrete business outcomes.
-4. **Visual Differentiator / Comparison Section:** An interactive capability showcase, comparison table (e.g., "Legacy vs Modern AI Solutions"), or before/after value breakdown.
-5. **Technology & Architecture Stack:** Categorized interactive pills/badges or cards detailing tools, languages, databases, and frameworks.
-6. **Workflow & Methodology ("How It Works"):** 3 to 5 step numbered timeline or process cards explaining the engagement model from audit to deployment.
-7. **Social Proof & Value Guarantee:** Trust badges, key advantages ("Why Work With Me"), ROI guarantees, or case highlights.
-8. **High-Converting Lead Capture Form:** Dedicated contact section with input fields, purpose selector, and strong action CTA.
-9. **Polished Footer:** Brand signature, quick navigation links, copyright, and social/contact channels.
-
-## 4. High-Energy Copywriting Rules
-- **Zero Generics Rule:** Avoid cliché placeholders (e.g., "Welcome to our site", "Best quality"). Write sharp, benefit-driven copy with action verbs, pain-point hooks, and realistic metrics.
-- **Action-Oriented CTAs:** Use high-intent, descriptive button labels tailored to the offering.
-
-## 5. Delivery Standard
-- Produce a single, self-contained, clean HTML5 file with embedded `<style>` (Vanilla CSS) and `<script>` (Vanilla JS) inside the assigned session workspace directory.
-- Strictly NO external CSS frameworks (like Tailwind or Bootstrap) unless explicitly requested.

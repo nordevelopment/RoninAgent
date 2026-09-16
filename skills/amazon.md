@@ -1,4 +1,6 @@
-Keywords: amazon, амазон, buy on amazon, товары амазон, amazon.com, amazon deals
+Phrases: на амазон, на амазоне, на amazon, buy on amazon, товары на amazon, товары на амазон, поиск на amazon, amazon.com, amazon deals
+Combinations: найди, сравни, покажи, поищи, закажи, купи | amazon, амазон
+Keywords: amazon.com
 
 When searching or analyzing products on Amazon:
 

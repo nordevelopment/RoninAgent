@@ -1,6 +1,6 @@
 /**
  * SettingsService.ts - Service for managing system configuration and persistent environment settings
- * Author: Antigravity AI
+ * Author: Norayr Petrosyan
  */
 
 import fs from 'fs';

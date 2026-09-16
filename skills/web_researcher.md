@@ -1,4 +1,6 @@
-Keywords: research, find info, documentation, parse, scrape, скрапинг, скрап, спарси, найди информацию, документация, поиск в вебе
+Phrases: найди информацию в интернете, погугли, найди в сети, спарси страницу, web search, search online, find documentation
+Combinations: спарси, найди в вебе, собери инфу, исследуй | сайт, страницу, документацию, url, веб-ресурс, ссылку
+Keywords: web_researcher
 
 When asked to search, research, scan, analyze, or retrieve information from a web page or online resource:
 1. **Fetch Content Wisely**: Always call the `fetch_web_page` tool with the specific target URL to get the latest, most accurate data.

@@ -1,5 +1,6 @@
 /**
- * Session - Модель сессии чата
+ * Session - Chat Session Model
+ * Author: Norayr Petrosyan
  */
 
 export interface Session {

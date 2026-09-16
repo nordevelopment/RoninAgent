@@ -1,5 +1,6 @@
 /**
- * Message - Модель сообщения чата
+ * Message - Chat Message Model
+ * Author: Norayr Petrosyan
  */
 import { DatabaseClient } from '../database/DatabaseClient.js';
 

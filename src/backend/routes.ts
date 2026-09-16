@@ -47,20 +47,7 @@ export async function registerRoutes(
   fsManager: FileSystemManager
 ): Promise<void> {
 
-  // Main chat template route
-  app.get('/', async (_request, reply) => {
-    return reply.view('chat.ejs');
-  });
 
-  // Render system settings page
-  app.get('/settings', async (_request, reply) => {
-    return reply.view('settings.ejs');
-  });
-
-  // Render task management page
-  app.get('/tasks', async (_request, reply) => {
-    return reply.view('tasks.ejs');
-  });
 
   // Get all tasks
   app.get('/api/tasks', async (_request, reply) => {
@@ -149,17 +136,17 @@ export async function registerRoutes(
     return reply.send(result);
   });
 
-  // Render agent editor page
-  app.get('/edit-agent/:agentId', async (request: FastifyRequest<{ Params: { agentId: string } }>, reply: FastifyReply) => {
-    const { agentId } = request.params;
+  // Get agent markdown files
+  app.get('/api/agents/:id/files', async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    const agentId = request.params.id;
 
     const exists = await agentService.agentExists(agentId);
     if (!exists) {
-      return reply.status(404).send('Agent not found');
+      return reply.status(404).send({ success: false, message: 'Agent not found' });
     }
 
     const files = await agentService.getAgentFiles(agentId);
-    return reply.view('edit_agent.ejs', { agentId, files });
+    return reply.send({ success: true, agentId, files });
   });
 
   // Save agent files

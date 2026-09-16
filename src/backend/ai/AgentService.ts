@@ -5,17 +5,17 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+// import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
 
 export class AgentService {
     private baseAgentsPath: string;
 
     constructor() {
         // Path to agents folder in project root
-        this.baseAgentsPath = path.join(__dirname, '../../../agents');
+        this.baseAgentsPath = path.resolve(process.cwd(), 'agents');
     }
 
     /**

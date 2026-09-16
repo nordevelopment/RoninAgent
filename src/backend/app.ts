@@ -1,4 +1,11 @@
+/**
+ * app.ts - Web Server Application
+ * Main application build and configuration logic
+ * Author: Norayr Petrosyan 
+ */
+
 import Fastify, { FastifyInstance, LogController } from 'fastify';
+import http from 'http';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
@@ -6,8 +13,7 @@ import basicAuth from '@fastify/basic-auth';
 import staticPlugin from '@fastify/static';
 import cookiePlugin from '@fastify/cookie';
 import multipartPlugin from '@fastify/multipart';
-import pointOfView from '@fastify/view';
-import ejs from 'ejs';
+
 
 import { config } from './config.js';
 import { DatabaseClient } from './database/DatabaseClient.js';
@@ -69,7 +75,7 @@ function isLoopbackHost(host: string): boolean {
  */
 export async function buildApp(): Promise<FastifyInstance> {
 
-  const app = Fastify({
+  const app = Fastify<http.Server>({
     logger: {
       level: config.LOG_LEVEL || 'info',
       transport: config.ENV !== 'production' ? {
@@ -80,9 +86,9 @@ export async function buildApp(): Promise<FastifyInstance> {
         },
       } : undefined,
     },
-    logController: new LogController({
-      disableRequestLogging: true,
-    }),
+    ...({
+      logController: new (LogController as any)({ disableRequestLogging: true }),
+    } as any),
     bodyLimit: 20971520, // 20MB
   });
 
@@ -243,16 +249,24 @@ export async function buildApp(): Promise<FastifyInstance> {
       decorateReply: false,
     });
 
+    const frontendDist = path.join(process.cwd(), 'frontend/dist');
+    const frontendDev = path.join(process.cwd(), 'frontend');
+    const staticRoot = fs.existsSync(frontendDist) ? frontendDist : frontendDev;
+
     await app.register(staticPlugin, {
-      root: path.join(process.cwd(), 'frontend'),
+      root: staticRoot,
       prefix: '/',
     });
 
-    await app.register(pointOfView, {
-      engine: {
-        ejs: ejs,
-      },
-      root: path.join(process.cwd(), 'src/views'),
+    // SPA fallback: for GET requests not matching API/workspace, serve index.html for Vue Router
+    app.setNotFoundHandler((request, reply) => {
+      if (request.method === 'GET' && !request.url.startsWith('/api/') && !request.url.startsWith('/workspace/')) {
+        const indexPath = path.join(staticRoot, 'index.html');
+        if (fs.existsSync(indexPath)) {
+          return reply.sendFile('index.html');
+        }
+      }
+      return reply.status(404).send({ success: false, message: 'Route not found' });
     });
 
     // Register routes

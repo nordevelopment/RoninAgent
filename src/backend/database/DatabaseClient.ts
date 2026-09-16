@@ -189,13 +189,10 @@ export class DatabaseClient {
         probeStmt.run(testBuffer);
         // If probe succeeded, dimension matches — delete the probe row
         this.db.prepare('DELETE FROM vec_memories WHERE rowid = -999').run();
-        logger.info({ expectedDim }, 'DatabaseClient: vec_memories dimension verified');
       } catch (dimErr: any) {
-        // Dimension mismatch detected — recreate vec_memories with the correct dimension
         logger.warn({ expectedDim, err: dimErr.message }, 'DatabaseClient: vec_memories dimension mismatch, recreating table');
         this.db.exec('DROP TABLE IF EXISTS vec_memories');
         this.db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS vec_memories USING vec0(embedding float[${expectedDim}])`);
-        logger.info({ expectedDim }, 'DatabaseClient: vec_memories recreated with correct dimension');
       }
     } catch (err: any) {
       logger.error({ err }, 'DatabaseClient: Failed to verify vec_memories dimension');

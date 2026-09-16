@@ -1,4 +1,7 @@
-Keywords: image, picture, draw, paint, art, photo, illustration, картинка, нарисуй, изображения, изображений, изображению, изображение, арт, фото, рисунок, иллюстрация
+Phrases: сгенерируй картинку, сгенерируй изображение, сгенерируй фото, генерация картинок, text to image, draw an image, generate an image, generate a picture, create a visual artwork, midjourney style, stable diffusion
+Combinations: нарисуй, сгенерируй, создай, сделай, нарисуй мне, draw, generate, paint, render | картинку, картиночку, изображение, арт, фото, рисунок, аватар, обои, иллюстрацию, image, photo, artwork, wallpaper, illustration
+Keywords: text2image, txt2img
+Exclude: посмотри фото, проанализируй фото, что на фото, распознай, прикрепил фото, прикрепил картинку, inspect image, analyze this image, look at this photo
  
 When asked to draw, paint, design, generate, or create an image, picture, photo, or visual artwork, strictly follow these instructions:
 1. **Rich Prompt Expansion & Style Adaptability**:
