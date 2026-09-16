@@ -7,12 +7,8 @@
 import fs from 'fs/promises';
 import fsSync from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { exec } from 'child_process';
 import { config } from '../config.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /**
  * Create directory if not exists (synchronous)
@@ -54,7 +50,7 @@ export class FileSystemManager {
 
   constructor(allowedRoots?: string[]) {
     // По умолчанию разрешаем работу только в workspace
-    const projectRoot = path.join(__dirname, '../../../');
+    const projectRoot = process.cwd();
     this.allowedRoots = allowedRoots || [path.join(projectRoot, 'workspace')];
 
     // Автоматически создаем разрешённые директории
@@ -290,7 +286,7 @@ export class FileSystemManager {
       ? sessionId
       : `session_${sessionId}`;
 
-    const projectRoot = path.join(__dirname, '../../../');
+    const projectRoot = process.cwd();
     const sessionDir = path.join(projectRoot, 'workspace', sessionFolderName);
     await fs.mkdir(sessionDir, { recursive: true });
 
@@ -318,7 +314,7 @@ export class FileSystemManager {
    * Open workspace root directory in operating system's native file explorer
    */
   async openWorkspaceInExplorer(): Promise<string> {
-    const projectRoot = path.join(__dirname, '../../../');
+    const projectRoot = process.cwd();
     const workspacePath = path.resolve(projectRoot, 'workspace');
     await fs.mkdir(workspacePath, { recursive: true });
 

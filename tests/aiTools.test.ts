@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { extractPathArgument, AITools } from '../src/backend/ai/AITools.js';
-import { FileSystemManager } from '../src/backend/services/FileSystemManager.js';
-import { WebPageContent } from '../src/backend/services/WebPageContent.js';
-import { OfficeDocumentService } from '../src/backend/services/OfficeDocumentService.js';
+import { extractPathArgument, AITools } from '../backend/ai/AITools.js';
+import { FileSystemManager } from '../backend/services/FileSystemManager.js';
+import { WebPageContent } from '../backend/services/WebPageContent.js';
+import { OfficeDocumentService } from '../backend/services/OfficeDocumentService.js';
 import path from 'path';
 
 describe('AITools & Path Extraction', () => {

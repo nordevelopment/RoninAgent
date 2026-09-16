@@ -3,8 +3,8 @@ import axios from 'axios';
 import fs from 'fs';
 import fsp from 'fs/promises';
 import path from 'path';
-import { AIClient, AIMessages } from '../src/backend/ai/AIClient.js';
-import { config } from '../src/backend/config.js';
+import { AIClient, AIMessages } from '../backend/ai/AIClient.js';
+import { config } from '../backend/config.js';
 
 vi.mock('axios');
 

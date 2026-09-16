@@ -8,12 +8,8 @@ import axios from 'axios';
 import fs from 'fs';
 import fsp from 'fs/promises';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import logger from '../utils/logger.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 
 export interface AIToolCall {
@@ -64,7 +60,7 @@ export class AIClient {
   }
 
   buildSystemPrompt(agentId: string = 'main_agent'): string {
-    const mainAgentPath = path.join(__dirname, `../../../agents/${agentId}`);
+    const mainAgentPath = path.join(process.cwd(), 'agents', agentId);
 
     if (fs.existsSync(mainAgentPath)) {
       // Strict order of file loading
@@ -107,7 +103,7 @@ export class AIClient {
 
     // 1. Scan agent-specific local skills (higher priority)
     if (agentId) {
-      const localSkillsDir = path.join(__dirname, `../../../agents/${agentId}/skills`);
+      const localSkillsDir = path.join(process.cwd(), 'agents', agentId, 'skills');
       if (fs.existsSync(localSkillsDir) && fs.statSync(localSkillsDir).isDirectory()) {
         const localFiles = fs.readdirSync(localSkillsDir);
         for (const file of localFiles) {
@@ -122,7 +118,7 @@ export class AIClient {
     }
 
     // 2. Scan shared global skills (fallback/base)
-    const sharedSkillsDir = path.join(__dirname, '../../../skills');
+    const sharedSkillsDir = path.join(process.cwd(), 'skills');
     if (fs.existsSync(sharedSkillsDir) && fs.statSync(sharedSkillsDir).isDirectory()) {
       const sharedFiles = fs.readdirSync(sharedSkillsDir);
       for (const file of sharedFiles) {

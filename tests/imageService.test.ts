@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
-import { ImageService } from '../src/backend/services/imageService.js';
-import { config } from '../src/backend/config.js';
+import { ImageService } from '../backend/services/imageService.js';
+import { config } from '../backend/config.js';
 
 vi.mock('axios');
 

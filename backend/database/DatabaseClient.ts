@@ -164,7 +164,7 @@ export class DatabaseClient {
     let schemaPath = path.join(__dirname, 'schema.sql');
 
     if (!fs.existsSync(schemaPath)) {
-      const fallbackPath = path.join(process.cwd(), 'src/backend/database/schema.sql');
+      const fallbackPath = path.join(process.cwd(), 'backend/database/schema.sql');
       if (fs.existsSync(fallbackPath)) {
         schemaPath = fallbackPath;
       }

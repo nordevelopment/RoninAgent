@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { LoginLimiter } from '../src/backend/utils/loginLimiter.js';
+import { LoginLimiter } from '../backend/utils/loginLimiter.js';
 
 describe('LoginLimiter', () => {
   it('allows attempts below the threshold', () => {

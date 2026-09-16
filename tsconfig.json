@@ -11,8 +11,8 @@
       "ES2022",
       "DOM"
     ],
-    "outDir": "./dist",
-    "rootDir": "./src",
+    "outDir": "./dist/backend",
+    "rootDir": "./backend",
     "strict": true,
     "noUnusedLocals": true,
     "noImplicitReturns": true,
@@ -24,7 +24,7 @@
     "resolveJsonModule": true
   },
   "include": [
-    "src/**/*"
+    "backend/**/*"
   ],
   "exclude": [
     "node_modules",

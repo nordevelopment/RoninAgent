@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ChatManager } from '../src/backend/ai/ChatManager.js';
-import { AIClient } from '../src/backend/ai/AIClient.js';
-import { ChatHistoryManager } from '../src/backend/ai/ChatHistoryManager.js';
-import { SessionManager } from '../src/backend/ai/SessionManager.js';
-import { MemoryManager } from '../src/backend/ai/MemoryManager.js';
-import { AITools } from '../src/backend/ai/AITools.js';
-import { DatabaseClient } from '../src/backend/database/DatabaseClient.js';
+import { ChatManager } from '../backend/ai/ChatManager.js';
+import { AIClient } from '../backend/ai/AIClient.js';
+import { ChatHistoryManager } from '../backend/ai/ChatHistoryManager.js';
+import { SessionManager } from '../backend/ai/SessionManager.js';
+import { MemoryManager } from '../backend/ai/MemoryManager.js';
+import { AITools } from '../backend/ai/AITools.js';
+import { DatabaseClient } from '../backend/database/DatabaseClient.js';
 
 describe('ChatManager Stop/Abort Functionality', () => {
   it('returns false when stopping a non-active session', () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { AgentService } from '../src/backend/ai/AgentService.js';
+import { AgentService } from '../backend/ai/AgentService.js';
 
 describe('AgentService Tests', () => {
   let agentService: AgentService;
