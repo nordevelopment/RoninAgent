@@ -70,7 +70,9 @@ export class WebPageContent {
                         if (href && !href.startsWith('javascript:') && !href.startsWith('#')) {
                             if (baseUrl && (href.startsWith('/') || !href.startsWith('http'))) {
                                 try {
-                                    href = new URL(href, baseUrl).href;
+                                    const parsedUrl = new URL(href, baseUrl);
+                                    parsedUrl.searchParams.delete('ld_src');
+                                    href = parsedUrl.href;
                                 } catch (e) { }
                             }
                             const label = childContent || $(child).attr('title') || $(child).attr('aria-label') || href;
@@ -191,13 +193,29 @@ export class WebPageContent {
                 $('script, style, noscript, iframe, ad, svg, canvas, form').remove();
 
                 const title = $('title').text().trim();
-                let $content = $('article, main, .content, #content');
+                let $content = $('main, #content');
 
                 if ($content.length === 0 || $content.text().trim().length < 300) {
-                    $content = $('body');
+                    const $articles = $('article');
+                    if ($articles.length > 0) {
+                        $content = $articles;
+                    } else {
+                        const $classContent = $('.content');
+                        if ($classContent.length > 0 && $classContent.text().trim().length >= 300) {
+                            $content = $classContent;
+                        } else {
+                            $content = $('body');
+                        }
+                    }
                 }
 
-                const rawMarkdown = this.elementToMarkdown($, $content[0], url);
+                let rawMarkdown = '';
+                $content.each((_, el) => {
+                    const part = this.elementToMarkdown($, el, url).trim();
+                    if (part) {
+                        rawMarkdown += part + '\n\n';
+                    }
+                });
                 const cleanContent = this.cleanMarkdown(rawMarkdown).substring(0, MAX_HTML_LENGTH);
 
                 return `Title: ${title}\n\nContent:\n${cleanContent}`;

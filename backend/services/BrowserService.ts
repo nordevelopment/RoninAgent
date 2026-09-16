@@ -22,7 +22,8 @@ export class BrowserService {
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
-            '--disable-gpu'
+            '--disable-gpu',
+            '--disable-blink-features=AutomationControlled'
           ]
         });
       } catch (err) {
@@ -85,11 +86,25 @@ export class BrowserService {
     const page = await browser.newPage();
     try {
       // Set user agent to simulate a standard desktop Chrome to prevent blocking
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
       await page.setViewport({ width: 1280, height: 800 });
+
+      // Bypass anti-bot detection (Cloudflare Turnstile, Datadome, etc.)
+      await page.evaluateOnNewDocument(() => {
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+      });
 
       // Navigate to page
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+      // Handle transient Cloudflare challenge verification if triggered
+      const title = await page.title();
+      if (title.toLowerCase().includes('just a moment') || title.toLowerCase().includes('cloudflare')) {
+        await page.waitForFunction(() => {
+          const t = document.title.toLowerCase();
+          return !t.includes('just a moment') && !t.includes('cloudflare');
+        }, { timeout: 8000 }).catch(() => {});
+      }
 
       // Wait until body has some meaningful text (>1000 chars) to ensure SPAs are rendered
       await page.waitForFunction(() => {
