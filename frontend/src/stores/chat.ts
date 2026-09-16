@@ -209,15 +209,23 @@ export const useChatStore = defineStore('chat', () => {
         body: JSON.stringify({ sessionId: currentSessionId.value }),
       });
       if (res.ok) {
-        const data = await res.json();
-        messages.value = (data.history || []).map((msg: any, idx: number) => ({
-          id: `hist_${idx}_${Date.now()}`,
-          role: msg.role === 'assistant' ? 'agent' : msg.role,
-          content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
-          reasoning: msg.reasoning || null,
-          attachments: msg.attachments || [],
-          timestamp: msg.timestamp || Date.now(),
-        }));
+        const rawHistory = data.history || [];
+        messages.value = rawHistory
+          .filter((msg: any) => {
+            if (msg.role === 'tool') return false;
+            if ((msg.role === 'assistant' || msg.role === 'agent') && (!msg.content || !String(msg.content).trim())) {
+              return false;
+            }
+            return true;
+          })
+          .map((msg: any, idx: number) => ({
+            id: `hist_${idx}_${Date.now()}`,
+            role: msg.role === 'assistant' ? 'agent' : msg.role,
+            content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
+            reasoning: msg.reasoning || null,
+            attachments: msg.attachments || [],
+            timestamp: msg.timestamp || Date.now(),
+          }));
       }
     } catch (err) {
       console.error('Failed to fetch history:', err);
