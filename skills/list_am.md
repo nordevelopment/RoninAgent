@@ -8,7 +8,18 @@ When searching or analyzing classifieds and products on List.am (Armenia):
    - Main Search: `https://www.list.am/category?q=QUERY`
 
 2. **Sorting & Filter Parameters**:
-   - Filter by Price / Currency: List.am lists prices in AMD (֏) or USD ($).
+   - **Price Range Parameters**:
+     - `price1=VALUE`: Minimum price (от)
+     - `price2=VALUE`: Maximum price (до)
+   - **Currency Parameter (`crc`)**:
+     - `crc=0` — AMD (֏, default)
+     - `crc=1` — USD ($)
+     - `crc=3` — RUB (₽)
+     - `crc=4` — EUR (€)
+   - **URL Examples**:
+     - Range in AMD: `https://www.list.am/category?q=QUERY&price1=10000&price2=50000&crc=0`
+     - Range in USD: `https://www.list.am/category?q=QUERY&price1=100&price2=500&crc=1`
+     - Min or Max only: `...&price1=50000` or `...&price2=200000`
    - Direct search query: `?q=QUERY`
 
 3. **Information Extraction**:
