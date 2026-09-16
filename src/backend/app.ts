@@ -249,7 +249,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       decorateReply: false,
     });
 
-    const frontendDist = path.join(process.cwd(), 'frontend/dist');
+    const frontendDist = path.join(process.cwd(), 'dist/frontend');
     const frontendDev = path.join(process.cwd(), 'frontend');
     const staticRoot = fs.existsSync(frontendDist) ? frontendDist : frontendDev;
 
