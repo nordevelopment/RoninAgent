@@ -25,8 +25,8 @@ export class DatabaseClient {
   private db: Database.Database;
 
   constructor(dbPath: string = './database.sqlite') {
-    // Create/open database
-    this.db = new Database(dbPath);
+    // Create/open database with 10s busy timeout
+    this.db = new Database(dbPath, { timeout: 10000 });
 
     // Load sqlite-vec extension for vector search
     sqliteVec.load(this.db);

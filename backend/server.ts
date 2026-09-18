@@ -15,10 +15,24 @@ async function start() {
     // Create and configure application
     app = await buildApp();
 
-    // Start server
-    const port = config.PORT;
+    // Start server with retry on EADDRINUSE (useful during watch reloads on Windows)
+    const port = Number(config.PORT);
     const host = config.HOST;
-    await app.listen({ port: Number(port), host });
+    let retries = 3;
+    while (retries >= 0) {
+      try {
+        await app.listen({ port, host });
+        break;
+      } catch (listenErr: any) {
+        if (listenErr?.code === 'EADDRINUSE' && retries > 0) {
+          logger.warn({ port, host, retriesLeft: retries }, 'Port in use, waiting 1s before retry...');
+          await new Promise((res) => setTimeout(res, 1000));
+          retries--;
+        } else {
+          throw listenErr;
+        }
+      }
+    }
 
     const gracefulShutdown = async (signal: string) => {
       app.log.info({ signal }, 'Received shutdown signal. Starting graceful shutdown...');
@@ -43,5 +57,14 @@ async function start() {
     process.exit(1);
   }
 }
+
+// Log unhandled rejections and exceptions instead of crashing silently
+process.on('unhandledRejection', (reason) => {
+  logger.error({ reason }, 'Unhandled Rejection caught');
+});
+
+process.on('uncaughtException', (err) => {
+  logger.error({ err }, 'Uncaught Exception caught');
+});
 
 start();
