@@ -96,5 +96,31 @@ describe('AITools & Path Extraction', () => {
 
       expect(result.result).toBe('File written successfully.');
     });
+
+    it('correctly resolves workspace root without duplicating workspace/workspace', () => {
+      const workspaceRoot = path.resolve(process.cwd(), 'workspace');
+      const fsManager = new FileSystemManager([workspaceRoot]);
+
+      expect(fsManager.validatePath('workspace')).toBe(workspaceRoot);
+      expect(fsManager.validatePath('workspace/')).toBe(workspaceRoot);
+      expect(fsManager.validatePath('./workspace')).toBe(workspaceRoot);
+      expect(fsManager.validatePath('./workspace/')).toBe(workspaceRoot);
+      expect(fsManager.validatePath('.')).toBe(workspaceRoot);
+      expect(fsManager.validatePath('')).toBe(workspaceRoot);
+    });
+
+    it('returns empty array and auto-creates fresh session directory on listDirectory', async () => {
+      const workspaceRoot = path.resolve(process.cwd(), 'workspace');
+      const fsManager = new FileSystemManager([workspaceRoot]);
+
+      const testSessionFolder = `session_unit_test_${Date.now()}`;
+      const result = await fsManager.listDirectory(`workspace/${testSessionFolder}`);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBe(0);
+
+      // Clean up the created test folder
+      await fsManager.deleteDirectory(testSessionFolder, true);
+    });
   });
 });
+

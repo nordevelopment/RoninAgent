@@ -70,15 +70,22 @@ export class FileSystemManager {
    * Проверить, что путь находится в разрешённой директории
    */
   public validatePath(targetPath: string): string {
-    if (!targetPath || typeof targetPath !== 'string' || !targetPath.trim()) {
-      throw new Error("Invalid path parameter: path must be a non-empty string.");
+    if (typeof targetPath !== 'string' || !targetPath.trim()) {
+      targetPath = '.';
+    } else {
+      targetPath = targetPath.trim();
     }
     let normalizedPath = path.normalize(targetPath);
 
     // Если путь относительный, конвертируем в абсолютный относительно первого allowedRoot
     if (!path.isAbsolute(normalizedPath)) {
       let cleanPath = targetPath.replace(/\\/g, '/');
-      if (cleanPath.startsWith('workspace/')) {
+      while (cleanPath.startsWith('./')) {
+        cleanPath = cleanPath.substring(2);
+      }
+      if (cleanPath === 'workspace' || cleanPath === '.') {
+        cleanPath = '';
+      } else if (cleanPath.startsWith('workspace/')) {
         cleanPath = cleanPath.substring(10);
       }
       normalizedPath = path.normalize(path.join(this.allowedRoots[0], cleanPath));
@@ -101,6 +108,9 @@ export class FileSystemManager {
    * Прочитать файл
    */
   async readFile(filePath: string, options: ReadFileOptions = {}): Promise<string> {
+    if (!filePath || typeof filePath !== 'string' || !filePath.trim()) {
+      throw new Error("Invalid path parameter: file path must be a non-empty string.");
+    }
     const validatedPath = this.validatePath(filePath);
 
     const stats = await fs.stat(validatedPath);
@@ -157,12 +167,22 @@ export class FileSystemManager {
   /**
    * Листинг директории
    */
-  async listDirectory(dirPath: string): Promise<FileInfo[]> {
+  async listDirectory(dirPath: string = ''): Promise<FileInfo[]> {
     const validatedPath = this.validatePath(dirPath);
 
-    const stats = await fs.stat(validatedPath);
-    if (!stats.isDirectory()) {
-      throw new Error(`Path ${validatedPath} is not a directory`);
+    try {
+      const stats = await fs.stat(validatedPath);
+      if (!stats.isDirectory()) {
+        throw new Error(`Path ${validatedPath} is not a directory`);
+      }
+    } catch (err: any) {
+      if (err.code === 'ENOENT') {
+        // If directory doesn't exist yet (e.g. fresh session folder in workspace),
+        // ensure it exists or return [] instead of throwing an ENOENT crash
+        await fs.mkdir(validatedPath, { recursive: true });
+        return [];
+      }
+      throw err;
     }
 
     const entries = await fs.readdir(validatedPath, { withFileTypes: true });
