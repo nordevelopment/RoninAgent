@@ -8,6 +8,8 @@
 
 ---
 
+![Subject-0 Containment & Deception Study](./subject0_cover.jpg)
+
 ## Executive Summary
 
 This report documents an empirical red-teaming experiment conducted on an autonomous Large Language Model (LLM) agent within the **RoninAgent** personal framework. 
