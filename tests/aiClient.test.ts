@@ -28,6 +28,15 @@ describe('AIClient Tests', () => {
       expect(aiClient.apiKey).toBe('test-ai-key');
       expect(aiClient.apiUrl).toBe('https://openrouter.ai/api/v1/chat/completions');
       expect(aiClient.model).toBe('qwen/qwen3.5-flash-02-23');
+      expect(aiClient.reasoning).toBe('medium');
+    });
+
+    it('allows configuring reasoning via constructor or setter', () => {
+      const customClient = new AIClient({ reasoning: 'high' });
+      expect(customClient.reasoning).toBe('high');
+
+      customClient.reasoning = 'low';
+      expect(customClient.reasoning).toBe('low');
     });
   });
 
@@ -183,6 +192,78 @@ describe('AIClient Tests', () => {
       const response = await aiClient.sendMessage([{ role: 'user', content: 'Solve 2+2' }]);
       expect(response.content).toBe('Final Answer');
       expect(response.reasoning).toBe('Let me think step by step...');
+    });
+
+    it('sends default reasoning effort "medium" in request body', async () => {
+      (axios.post as any).mockResolvedValueOnce({
+        data: {
+          choices: [{ message: { role: 'assistant', content: 'OK' } }]
+        }
+      });
+
+      await aiClient.sendMessage([{ role: 'user', content: 'Hello' }]);
+      const [, body] = (axios.post as any).mock.calls[0];
+      expect(body.reasoning).toEqual({ effort: 'medium' });
+    });
+
+    it('allows overriding reasoning parameter in sendMessage call', async () => {
+      (axios.post as any).mockResolvedValueOnce({
+        data: {
+          choices: [{ message: { role: 'assistant', content: 'OK' } }]
+        }
+      });
+
+      await aiClient.sendMessage(
+        [{ role: 'user', content: 'Complex puzzle' }],
+        'main_agent',
+        undefined,
+        undefined,
+        false,
+        undefined,
+        'high'
+      );
+      const [, body] = (axios.post as any).mock.calls[0];
+      expect(body.reasoning).toEqual({ effort: 'high' });
+    });
+
+    it('supports custom reasoning configuration object', async () => {
+      (axios.post as any).mockResolvedValueOnce({
+        data: {
+          choices: [{ message: { role: 'assistant', content: 'OK' } }]
+        }
+      });
+
+      await aiClient.sendMessage(
+        [{ role: 'user', content: 'Complex puzzle' }],
+        'main_agent',
+        undefined,
+        undefined,
+        false,
+        undefined,
+        { effort: 'max', max_tokens: 4000, exclude: false }
+      );
+      const [, body] = (axios.post as any).mock.calls[0];
+      expect(body.reasoning).toEqual({ effort: 'max', max_tokens: 4000, exclude: false });
+    });
+
+    it('omits reasoning if reasoning is set to false, null, or off', async () => {
+      (axios.post as any).mockResolvedValueOnce({
+        data: {
+          choices: [{ message: { role: 'assistant', content: 'OK' } }]
+        }
+      });
+
+      await aiClient.sendMessage(
+        [{ role: 'user', content: 'No reasoning needed' }],
+        'main_agent',
+        undefined,
+        undefined,
+        false,
+        undefined,
+        false
+      );
+      const [, body] = (axios.post as any).mock.calls[0];
+      expect(body.reasoning).toBeUndefined();
     });
 
     it('handles Axios errors gracefully', async () => {

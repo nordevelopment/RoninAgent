@@ -43,7 +43,7 @@ function syncFromStore() {
   providerSelect.value = currentP;
   previousProvider.value = currentP;
 
-  apiUrl.value = settingsStore.aiApiUrl || 'https://openrouter.ai/api/v1/chat/completions';
+  apiUrl.value = settingsStore.aiApiUrl || '';
   defaultModel.value = settingsStore.aiDefaultModel || 'qwen/qwen3.5-flash-02-23';
   selectedModelFromList.value = defaultModel.value;
   apiKey.value = '';

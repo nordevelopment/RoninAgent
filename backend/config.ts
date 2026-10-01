@@ -16,8 +16,8 @@ export const config = {
   APP_USER: process.env.APP_USER || 'admin',
   APP_PASSWORD: process.env.APP_PASSWORD || '',
   AI_API_KEY: process.env.AI_API_KEY || '',
-  AI_API_URL: (process.env.AI_API_URL && process.env.AI_API_URL.trim()) || 'https://openrouter.ai/api/v1/chat/completions',
-  AI_DEFAULT_MODEL: process.env.AI_DEFAULT_MODEL || 'qwen/qwen3.5-flash-02-23',
+  AI_API_URL: (process.env.AI_API_URL && process.env.AI_API_URL.trim()) || '',
+  AI_DEFAULT_MODEL: process.env.AI_DEFAULT_MODEL || '',
   AI_EMBEDDING_MODEL: process.env.AI_EMBEDDING_MODEL || 'Qwen/Qwen3-Embedding-8B',
   AI_EMBEDDING_DIM: parseInt(process.env.AI_EMBEDDING_DIM || '4096'),
   AI_MAX_HISTORY_MESSAGES: process.env.AI_MAX_HISTORY_MESSAGES || 30,
@@ -26,6 +26,7 @@ export const config = {
   AI_TIMEOUT: 180000,
   AI_MAX_FILE_READ_SIZE: parseInt(process.env.AI_MAX_FILE_READ_SIZE || '1048576'),
   AI_MAX_THINKING_STEPS: parseInt(process.env.AI_MAX_THINKING_STEPS || '30'),
+  AI_REASONING_EFFORT: process.env.AI_REASONING_EFFORT || 'medium',
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
   ALLOWED_TELEGRAM_USER_IDS: process.env.ALLOWED_TELEGRAM_USER_IDS || '',
 
@@ -94,6 +95,9 @@ if (fs.existsSync(configJsonPath)) {
       }
       if (parsed.ai_max_thinking_steps) {
         config.AI_MAX_THINKING_STEPS = parseInt(parsed.ai_max_thinking_steps, 10);
+      }
+      if (parsed.ai_reasoning_effort && parsed.ai_reasoning_effort.trim()) {
+        config.AI_REASONING_EFFORT = parsed.ai_reasoning_effort.trim();
       }
     }
   } catch (err) {

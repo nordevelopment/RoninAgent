@@ -57,7 +57,7 @@ export class SettingsService {
     return {
       providers: getAIProvidersList(),
       hasAiApiKey: !!config.AI_API_KEY,
-      aiApiUrl: config.AI_API_URL || 'https://openrouter.ai/api/v1/chat/completions',
+      aiApiUrl: config.AI_API_URL || '',
       aiDefaultModel: config.AI_DEFAULT_MODEL || 'qwen/qwen3.5-flash-02-23',
       hasTelegramBotToken: !!config.TELEGRAM_BOT_TOKEN,
       allowedTelegramUserIds: config.ALLOWED_TELEGRAM_USER_IDS || '',

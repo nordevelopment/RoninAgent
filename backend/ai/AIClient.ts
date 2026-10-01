@@ -39,6 +39,17 @@ export interface AIResponse {
   };
 }
 
+export type AIReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+
+export interface AIReasoningConfig {
+  effort?: AIReasoningEffort | string;
+  max_tokens?: number;
+  exclude?: boolean;
+  [key: string]: unknown;
+}
+
+export type AIReasoningParam = AIReasoningEffort | AIReasoningConfig | boolean | null | string;
+
 interface AiContentItem {
   type: 'text' | 'image_url';
   text?: string;
@@ -46,17 +57,31 @@ interface AiContentItem {
 }
 
 export class AIClient {
+  private customReasoning?: AIReasoningParam;
+
   get apiKey(): string {
     return config.AI_API_KEY;
   }
   get apiUrl(): string {
-    return config.AI_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
+    return config.AI_API_URL || '';
   }
   get model(): string {
     return config.AI_DEFAULT_MODEL;
   }
+  get reasoning(): AIReasoningParam {
+    if (this.customReasoning !== undefined) {
+      return this.customReasoning;
+    }
+    return config.AI_REASONING_EFFORT || 'medium';
+  }
+  set reasoning(value: AIReasoningParam) {
+    this.customReasoning = value;
+  }
 
-  constructor() {
+  constructor(options?: { reasoning?: AIReasoningParam }) {
+    if (options?.reasoning !== undefined) {
+      this.customReasoning = options.reasoning;
+    }
   }
 
   buildSystemPrompt(agentId: string = 'main_agent'): string {
@@ -270,12 +295,45 @@ export class AIClient {
 
 
   /**
+   * Format reasoning parameter for the API request body.
+   * OpenRouter and OpenAI unified format: { reasoning: { effort: 'medium', ... } }
+   * If disabled (false, null, 'off'), returns undefined to omit from payload.
+   */
+  formatReasoningParam(reasoning?: AIReasoningParam): AIReasoningConfig | undefined {
+    const target = reasoning !== undefined ? reasoning : this.reasoning;
+
+    if (target === false || target === null) {
+      return undefined;
+    }
+
+    if (target === true) {
+      return { effort: 'medium' };
+    }
+
+    if (typeof target === 'string') {
+      const trimmed = target.trim();
+      if (!trimmed || trimmed === 'off' || trimmed === 'false') {
+        return undefined;
+      }
+      return { effort: trimmed };
+    }
+
+    if (typeof target === 'object') {
+      return target as AIReasoningConfig;
+    }
+
+    return { effort: 'medium' };
+  }
+
+  /**
    * Send a message to AI
    * @param messages - array of messages (dialog history)
-   * @param tools - list of available tools (from AITools.getAvailableTools())
    * @param agentId - ID of the agent (folder name in agents/)
-   * @param tools - list of available tools
+   * @param tools - list of available tools (from AITools.getAvailableTools())
    * @param additionalSystem - additional system prompt (e.g., memory context)
+   * @param skipSkills - whether to skip dynamic skills
+   * @param signal - AbortSignal for request cancellation
+   * @param reasoning - reasoning parameter (defaults to 'medium' from this.reasoning)
    * @returns ответ от AI
    */
   async sendMessage(
@@ -284,7 +342,8 @@ export class AIClient {
     tools?: any[],
     additionalSystem?: string,
     skipSkills?: boolean,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    reasoning?: AIReasoningParam
   ): Promise<AIResponse> {
 
     const systemPrompt = this.buildSystemPrompt(agentId);
@@ -370,6 +429,11 @@ export class AIClient {
       temperature: config.AI_TEMPERATURE,
       max_tokens: config.AI_MAX_TOKENS,
     };
+
+    const formattedReasoning = this.formatReasoningParam(reasoning);
+    if (formattedReasoning) {
+      requestBody.reasoning = formattedReasoning;
+    }
 
     // If tools are passed, add them to the request
     if (tools && tools.length > 0) {

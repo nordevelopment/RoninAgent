@@ -29,7 +29,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const saveStatus = ref<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const aiProvider = ref<string>('openrouter');
-  const aiApiUrl = ref<string>('https://openrouter.ai/api/v1/chat/completions');
+  const aiApiUrl = ref<string>('');
   const aiApiKey = ref<string>('');
   const hasAiApiKey = ref<boolean>(false);
   const aiDefaultModel = ref<string>('qwen/qwen3.5-flash-02-23');
@@ -59,7 +59,7 @@ export const useSettingsStore = defineStore('settings', () => {
       if (res.ok) {
         const data = await res.json();
         providers.value = data.providers || [];
-        aiApiUrl.value = (data.aiApiUrl && data.aiApiUrl.trim()) || 'https://openrouter.ai/api/v1/chat/completions';
+        aiApiUrl.value = (data.aiApiUrl && data.aiApiUrl.trim()) || '';
         aiDefaultModel.value = (data.aiDefaultModel && data.aiDefaultModel.trim()) || 'qwen/qwen3.5-flash-02-23';
         hasAiApiKey.value = !!data.hasAiApiKey;
         hasTelegramBotToken.value = !!data.hasTelegramBotToken;
@@ -84,8 +84,6 @@ export const useSettingsStore = defineStore('settings', () => {
     const currentUrl = (aiApiUrl.value || '').trim().replace(/\/+$/, '');
     if (!currentUrl) {
       aiProvider.value = 'openrouter';
-      const openRouterPreset = providers.value.find((p) => p.id === 'openrouter');
-      aiApiUrl.value = openRouterPreset?.baseUrl || openRouterPreset?.url || 'https://openrouter.ai/api/v1/chat/completions';
       return;
     }
 
