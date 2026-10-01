@@ -36,7 +36,8 @@
     "start": "npm run build && node dist/backend/server.js",
     "db:reset": "tsx backend/database/db-reset.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "evals": "tsx tests/evals/runner.ts"
   },
   "dependencies": {
     "@fastify/basic-auth": "^6.3.0",

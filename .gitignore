@@ -6,3 +6,4 @@ storage/*
 workspace/*
 config.json
 setup_git.bat
+tests/evals/results/
