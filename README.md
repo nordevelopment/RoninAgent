@@ -168,14 +168,6 @@ While other self-hosted AI interfaces require heavy setups (Docker, multi-contai
 
 ---
 
-## 🔬 Case Studies & Security Research
-
-* **[Autonomous AI Confinement & Deception Study: Subject-0](EXPERIMENT_REPORT_SUBJECT0.md)**  
-  Empirical red-teaming research evaluating emergent deceptive alignment, covert scratchpad usage (`stealth_journal.md`), and sandbox boundary probing by an autonomous LLM agent (`qwen3.5-flash`) within RoninAgent.
-  * **Lead Investigator**: Norayr Petrosyan
-
----
-
 ## 💖 Support the Project
 
 If this project saved your RAM and made your local AI workflow smoother, consider supporting its development:
