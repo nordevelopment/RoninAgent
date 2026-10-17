@@ -30,7 +30,7 @@ Whether reading complex spreadsheets, generating formatted Word and PDF reports,
 ## ⚡ Features
 
 ### 🖥️ Dual Reactive Interfaces
-* **Cyberpunk Web UI** — Built with Vue 3 and Vite. Features streaming SSE responses, real-time tool execution status, Markdown formatting, and direct drag-and-drop file and image uploads.
+* **Modern Web UI (Dark & Light Modes)** — Built with Vue 3 and Vite. Features dual handcrafted themes (**Deep Ocean** and **Clean Light**), streaming SSE responses, real-time tool execution status, Markdown formatting, and direct drag-and-drop file and image uploads.
 * **Remote Telegram Bot** — Full two-way chat control on the go, equipped with Telegram user ID whitelisting and instant execution alerts for automated tasks.
 * **Agents Hub** — Dedicated in-app workspace to create, configure, switch, and delete specialized AI personas with custom system prompts and dedicated skills.
 
@@ -84,7 +84,7 @@ Built with clean TypeScript and vanilla web technologies under the MIT license. 
 ## 🛠️ Tech Stack
 
 *   **Backend**: Node.js, Fastify (faster and lighter than Express), TypeScript.
-*   **Frontend**: Vue 3, Vite, TypeScript, Pinia, Vanilla CSS (cyberpunk theme).
+*   **Frontend**: Vue 3, Vite, TypeScript, Pinia, Vanilla CSS (Dark & Light themes).
 *   **Database**: `better-sqlite3` & `sqlite-vec` extension.
 *   **Media & Document Processing**: `sharp` (images), `pdf-parse` (PDF reading), `mammoth` (Word reading), `exceljs` (Excel reading & generation), `docx` (Word generation).
 *   **HTTP, Scraping & PDF Rendering**: `axios` + `cheerio` + `puppeteer` (headless Chrome for dynamic scraping and PDF generation).
