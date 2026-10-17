@@ -33,7 +33,7 @@
     "build:backend": "tsc",
     "build:frontend": "vite build",
     "build": "tsc && vite build",
-    "start": "npm run build && node dist/backend/server.js",
+    "start": "node dist/backend/server.js",
     "db:reset": "tsx backend/database/db-reset.ts",
     "test": "vitest run",
     "test:watch": "vitest",

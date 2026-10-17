@@ -6,38 +6,52 @@
 [![GitHub Last Commit](https://img.shields.io/github/last-commit/nordevelopment/RoninAgent?style=flat-square)](https://github.com/nordevelopment/RoninAgent/commits/main)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
-> ⭐ **Star Us on GitHub!**
-> If you find RoninAgent useful or inspiring, please consider giving this repository a star! It helps the project grow and fuels future development. 🚀
+## What is RoninAgent?
 
-> [!NOTE]
-> **Rebranding Notice**: **RoninAgent** was formerly known as **OpenPAIAgent** (Open Personal AI Agent). Same lightning-fast, zero-bloat architecture — now with a stronger sovereign identity.
+**RoninAgent** is a high-speed, zero-bloat, open-source personal AI agent engineered for **local autonomy**, deep document processing, and web intelligence. Designed as a lean, production-grade alternative to resource-heavy AI frameworks, it delivers pure TypeScript performance, near-instant server startup (1-2s), and 100% local storage with zero telemetry.
 
-<a href="https://nordevelopment.github.io/RoninAgent">RoninAgent project page</a>
-
-RoninAgent is a high-speed, zero-bloat open-source personal AI agent built for absolute privacy, local execution, and total autonomy. Designed as an ultra-lightweight alternative to resource-heavy frameworks, it drops complex abstractions like LangChain in favor of pure TypeScript performance, sub-second cold starts, and complete data sovereignty.
-
-> [!TIP]
-> **🌍 Built for markets Western agents can't read.** Out of the box RoninAgent understands **Wildberries**, **Ozon**, **List.am** (Armenia), **Temu** and **Amazon** — each skill carries that marketplace's real URL structure, price-sorting parameters and parsing rules, so the agent can actually pull and compare live listings. Trigger keywords are bilingual (`wildberries` / `вайлдберриз`, `ozon` / `озон`, `list.am` / `лист ам`), so you can ask in English or Russian.
+Whether reading complex spreadsheets, generating formatted Word and PDF reports, scraping dynamic JavaScript web apps, or running scheduled background tasks, RoninAgent handles the entire lifecycle locally — accessible via a reactive **Dark and Light Web UI** or remotely through **Telegram**.
 
 ---
 
-## ⚡Features
-*   **💬 Dual Interfaces**: A beautiful cyberpunk-themed Web UI + Remote chat access via a Telegram bot.
-*   **🤖 Multi-Agent Hub**: Dedicated in-app **Agents Hub** manager to create, edit, switch, and delete custom AI agents. Easily tweak persona files (`Agent.md`, `Identity.md`, `User.md`, `Memory.md`) and tailor prompt instructions for each specialized agent.
-*   **🧠 Modular System Prompt**: The agent's personality and instructions are compiled dynamically from simple Markdown files (`Agent.md`, `Identity.md`, `User.md`, `Memory.md`).
-*   **⚡ Dynamic Agent Skills**: Save LLM context tokens by loading specialized prompt instructions conditionally. Shared skills live in `skills/*.md` (with optional agent-specific overrides in `agents/<agentId>/skills/*.md`). When a query matches header keywords (e.g., `Keywords: amazon, wildberries, temu, code`), instructions are dynamically injected into the system prompt. Comes with pre-built skills for:
-    *   **🛒 Regional E-commerce & Local Search**: Marketplace-specific URL structures, price sorting, and parsing rules for **Wildberries**, **Ozon**, **List.am** (Armenia), **Temu**, and **Amazon** — with bilingual EN/RU trigger keywords.
-    *   **💻 Software Engineering**: Refactoring, debugging, and strict code style instructions.
-    *   **🎨 Content Writing & Design**: Copywriting, UI/UX guidelines, and image generation prompt optimization.
-*   **👁️ AI Vision & Document Analysis**: Attach images or upload documents directly in the chat. Features auto-optimization for images via `sharp` and native parsing for documents (**PDF**, **Word**, **Excel**, **Text/CSV/JSON**).
-*   **🔧 Powerful Tool Execution (Function Calling)**:
-    *   **📄 Full File & Document Lifecycle (Read & Write)**: Full read, create, update, and deletion support for multiple document types within the dedicated local `workspace/` folder:
-        *   **Read & Analyze**: Text/Markdown/Code/JSON/CSV, **PDF documents** (`.pdf`), **Word documents** (`.docx`, `.doc`), and **Excel spreadsheets** (`.xlsx`, `.xls` with multi-sheet inspection).
-        *   **Generate & Create**: Generate structured **Excel spreadsheets** (`.xlsx`) with custom columns, row styling, and formulas; build styled **Word documents** (`.docx`) with headings and tables; render custom HTML/CSS into professional A4 **PDF documents**; and create/update **text/code files**.
-    *   **Web Scraper**: Downloads pages, strips out bloated HTML, and cleans the text for real-time AI analysis. Supports both fast static scraping and dynamic rendering with automatic fallback for SPAs (like React, Vue, e-commerce sites).
-    *   **Image Generation**: Generates images using **Together AI** or **X.AI (Grok)** APIs directly in the chat, with smart fallback logic (if one provider is not configured, it automatically uses the other).
-*   **💾 Semantic Memory (SQLite + Vectors)**: Saves chat sessions and history using SQLite, with support for semantic vector search via the lightweight `sqlite-vec` extension.
-*   **📋 Task Management & Scheduler**: Schedule automated background tasks or trigger them manually. Features an automatic background task runner (scans every 60s), real-time status tracking in the UI, and instant Telegram execution alerts.
+> ⭐ **Star Us on GitHub!**
+> If you find RoninAgent useful or inspiring, please consider giving this repository a star! It helps the project grow and fuels future development. 🚀
+
+---
+
+
+🌐 **[Live Project Page & Documentation](https://nordevelopment.github.io/RoninAgent)**
+
+> [!TIP]
+> **Built-in Regional E-Commerce Intelligence**: Out of the box, RoninAgent understands **Wildberries**, **Ozon**, **List.am** (Armenia), **Temu**, and **Amazon**. Each skill embeds the marketplace's actual URL schema, price filters, and scraping logic to extract and compare live listings. Skills trigger automatically via bilingual keywords (`wildberries`, `ozon`, `list.am`, `temu`, `amazon`), supporting both English and Russian queries seamlessly.
+
+---
+
+## ⚡ Features
+
+### 🖥️ Dual Reactive Interfaces
+* **Cyberpunk Web UI** — Built with Vue 3 and Vite. Features streaming SSE responses, real-time tool execution status, Markdown formatting, and direct drag-and-drop file and image uploads.
+* **Remote Telegram Bot** — Full two-way chat control on the go, equipped with Telegram user ID whitelisting and instant execution alerts for automated tasks.
+* **Agents Hub** — Dedicated in-app workspace to create, configure, switch, and delete specialized AI personas with custom system prompts and dedicated skills.
+
+### 📄 Complete Document Lifecycle (Read & Write)
+* **Universal Document Reader** — Native, local parsing without external cloud dependencies: **PDF** (`.pdf`), **Word** (`.docx`, `.doc`), **Excel** (`.xlsx`, `.xls` with multi-sheet inspection), CSV, JSON, Markdown, and source code.
+* **Autonomous Document Generator** — Generates publication-ready **Excel sheets** (custom styles, formulas, and multi-column layouts), styled **Word documents**, and pixel-perfect A4 **PDFs** (rendered via headless Chrome).
+* **AI Vision & Optimization** — Multi-modal image analysis with automatic compression and resizing via `sharp` to minimize LLM token consumption.
+
+### 🌐 Web Scraping & Market Intelligence
+* **Hybrid Web Scraper** — Dual-engine architecture: ultra-fast static HTML extraction (`cheerio`) with automatic fallback to headless Chromium (`puppeteer`) for JavaScript-rendered SPAs (React, Vue, marketplaces).
+* **Out-of-the-Box Marketplace Skills** — Pre-tuned query schemas and parsing rules for **Amazon**, **Wildberries**, **Ozon**, **Temu**, and **List.am** (Armenia), triggered by bilingual EN/RU keywords.
+
+### 🧠 Dynamic Modular Prompts & Memory
+* **Token-Efficient Dynamic Skills** — Injects specialized domain instructions (coding, market research, copywriting) on-the-fly only when relevant keywords appear in the user's prompt, saving thousands of context tokens.
+* **Modular Markdown Persona** — System prompts dynamically compile from transparent Markdown files (`Agent.md`, `Identity.md`, `User.md`, `Memory.md`).
+* **Hybrid Semantic Vector Memory** — Persistent conversation history stored in local SQLite, powered by `sqlite-vec` for embeddings with high-recall fallback (`LIKE` queries) — zero external vector database required.
+
+### ⚙️ Automation, Tools & Security
+* **Background Task Scheduler** — Autonomous cron engine (evaluates every 60s) for scheduled workflows, complete with UI status indicators and Telegram push alerts.
+* **Multi-Provider Image Generation** — Text-to-image synthesis using Together AI or xAI (Grok), with automatic failover between configured providers.
+* **Hardened Local Sandbox** — Strict path containment (`workspace/` boundary validation), constant-time credential comparison, brute-force IP rate limiting, and optional HTTP Basic Auth.
 
 ---
 
@@ -70,7 +84,7 @@ Built with clean TypeScript and vanilla web technologies under the MIT license. 
 ## 🛠️ Tech Stack
 
 *   **Backend**: Node.js, Fastify (faster and lighter than Express), TypeScript.
-*   **Frontend**: EJS, Vanilla CSS (cyberpunk theme), Vanilla JS.
+*   **Frontend**: Vue 3, Vite, TypeScript, Pinia, Vanilla CSS (cyberpunk theme).
 *   **Database**: `better-sqlite3` & `sqlite-vec` extension.
 *   **Media & Document Processing**: `sharp` (images), `pdf-parse` (PDF reading), `mammoth` (Word reading), `exceljs` (Excel reading & generation), `docx` (Word generation).
 *   **HTTP, Scraping & PDF Rendering**: `axios` + `cheerio` + `puppeteer` (headless Chrome for dynamic scraping and PDF generation).
@@ -96,7 +110,7 @@ npm install
 Configuration can be set up beforehand via a `.env` file or configured interactively via the **Web Setup Wizard** on first launch.
 
 ```bash
-# Start - Build & launch the server
+# Start the server (auto-builds on first run, sub-second launch thereafter)
 npm start
 ```
 
