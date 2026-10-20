@@ -11,6 +11,7 @@
         content="AI Agent, Personal AI, RoninAgent, Web Scraper, PDF Generator, Document Generator, Image Generation, Task Scheduler, Telegram Bot, SQLite vector, Web UI, TypeScript, lightweight AI">
     <meta name="author" content="Norayr Petrosyan">
     <meta name="robots" content="index, follow">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23042f3a'/%3E%3Cpath d='M17 46 46 17M18 17l29 29' stroke='%2322d3ee' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -30,16 +31,23 @@
     <meta property="twitter:image"
         content="https://raw.githubusercontent.com/nordevelopment/RoninAgent/main/frontend/assets/og-image.png">
 
-    <!-- Google Fonts for Cyberpunk Aesthetic -->
+    <!-- Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Orbitron:wght@400..900&family=Rajdhani:wght@300;400;500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
         rel="stylesheet">
-
-    <!-- Link to Cybercore CSS Framework -->
-    <link rel="stylesheet" href="frontend/css/cybercore.css">
-    <script src="frontend/js/theme.js"></script>
+    <script>
+        (function () {
+            try {
+                const savedTheme = localStorage.getItem('ronin-theme');
+                const preferredTheme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', savedTheme || preferredTheme);
+            } catch (_) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
 
     <style>
         /* Landing Page Custom Styling & Micro-Animations */
@@ -461,11 +469,12 @@
             line-height: 1.6;
         }
     </style>
+    <link rel="stylesheet" href="frontend/css/landing.css">
 </head>
 
 <body>
 
-    <!-- Cyberpunk Navbar -->
+    <!-- Primary navigation -->
     <nav class="cyber-nav">
         <a href="index.html" class="cyber-nav__brand">⚔️ RoninAgent</a>
         <button class="cyber-nav__burger" id="navBurger" aria-label="Toggle navigation" aria-expanded="false">
@@ -543,14 +552,14 @@
 
             <div class="hero-buttons" style="margin-top: var(--space-lg);">
                 <a href="#setup" class="cyber-btn cyber-btn--magenta cyber-btn--lg">
-                    <span>[ QUICK START SETUP ]</span>
+                    <span>Quick Start</span>
                 </a>
                 <a href="#capabilities" class="cyber-btn cyber-btn--cyan cyber-btn--lg">
-                    <span>[ AGENT CAPABILITIES ]</span>
+                    <span>Explore Capabilities</span>
                 </a>
                 <a href="https://github.com/nordevelopment/RoninAgent"
                     class="cyber-btn cyber-btn--yellow cyber-btn--lg" target="_blank">
-                    <span>[ VIEW ON GITHUB ]</span>
+                    <span>View on GitHub</span>
                 </a>
             </div>
         </div>
@@ -661,7 +670,7 @@
                         <span class="cyber-card__badge">WEB UI + TELEGRAM</span>
                     </div>
                     <p>
-                        Cyberpunk-themed local Web UI for desktop productivity + remote Telegram bot with
+                        Modern local Web UI for desktop productivity + remote Telegram bot with
                         <code>ALLOWED_TELEGRAM_USER_IDS</code> whitelist for safe on-the-go management.
                     </p>
                 </div>
@@ -804,7 +813,7 @@
                         </div>
                         <div class="terminal-box" style="margin-top: 0;">
                             <div class="terminal-header">
-                                <span>AGENT OUTPUT // WEB SCRAPER LOG</span>
+                                <span>Agent output · Web scraper log</span>
                             </div>
                             <pre><code>[INFO] Matching skill: amazon.md (Keywords: amazon, price)
 [TOOL] Executing scrape_web_page...
@@ -842,7 +851,7 @@
                         </div>
                         <div class="terminal-box" style="margin-top: 0; border-color: var(--cyber-magenta-500);">
                             <div class="terminal-header" style="color: var(--cyber-magenta-500);">
-                                <span>AGENT OUTPUT // PDF GENERATOR LOG</span>
+                                <span>Agent output · PDF generator log</span>
                             </div>
                             <pre><code>[TOOL] Executing generate_pdf...
 [HTML] Compiling styled template (CSS Grid, Custom Fonts)...
@@ -876,7 +885,7 @@
                         </div>
                         <div class="terminal-box" style="margin-top: 0; border-color: var(--cyber-green-500);">
                             <div class="terminal-header" style="color: var(--cyber-green-500);">
-                                <span>AGENT OUTPUT // OFFICE GENERATOR LOG</span>
+                                <span>Agent output · Office generator log</span>
                             </div>
                             <pre><code>[TOOL] Executing generate_excel_document...
 [EXCEL] Building sheet "August Expenses" (4 columns, 12 rows)...
@@ -909,7 +918,7 @@
                         </div>
                         <div class="terminal-box" style="margin-top: 0; border-color: var(--cyber-yellow-500);">
                             <div class="terminal-header" style="color: var(--cyber-yellow-500);">
-                                <span>AGENT OUTPUT // BACKGROUND SCHEDULER LOG</span>
+                                <span>Agent output · Background scheduler log</span>
                             </div>
                             <pre><code>[SCHEDULER] Task #42 triggered (Cron: 0 9 * * *).
 [EXECUTE] Scraping HackerNews top stories...
@@ -941,7 +950,7 @@
                         </div>
                         <div class="terminal-box" style="margin-top: 0;">
                             <div class="terminal-header">
-                                <span>AGENT OUTPUT // IMAGE GENERATOR LOG</span>
+                                <span>Agent output · Image generator log</span>
                             </div>
                             <pre><code>[TOOL] Executing generate_image...
 [PROVIDER] Using Together AI (Flux.1 Model)...
@@ -1010,7 +1019,7 @@
             <!-- Code Command Boxes -->
             <div class="cyber-grid--2">
                 <div>
-                    <h3 class="highlight-text">// STANDARD NPM INSTALLATION</h3>
+                    <h3 class="highlight-text">Standard npm installation</h3>
                     <p
                         style="color: var(--color-text-secondary); margin-bottom: var(--space-xs); font-size: var(--text-sm);">
                         Requires Node.js (v20+) and npm (v9+). Fast and simple:
@@ -1018,7 +1027,7 @@
 
                     <div class="terminal-box">
                         <div class="terminal-header">
-                            <span>BASH // CLONE & START</span>
+                            <span>Bash · Clone and start</span>
                             <div class="terminal-actions">
                                 <span class="terminal-dot"></span>
                                 <span class="terminal-dot"></span>
@@ -1035,7 +1044,7 @@ npm start</code></pre>
                 </div>
 
                 <div>
-                    <h3 class="highlight-text">// WINDOWS 1-CLICK LAUNCH (`run.bat`)</h3>
+                    <h3 class="highlight-text">Windows one-click launch (`run.bat`)</h3>
                     <p
                         style="color: var(--color-text-secondary); margin-bottom: var(--space-xs); font-size: var(--text-sm);">
                         Download the ZIP file, extract it, and simply run the batch launcher:
@@ -1043,7 +1052,7 @@ npm start</code></pre>
 
                     <div class="terminal-box">
                         <div class="terminal-header">
-                            <span>CMD // WINDOWS BATCH LAUNCHER</span>
+                            <span>Command Prompt · Windows launcher</span>
                             <div class="terminal-actions">
                                 <span class="terminal-dot"></span>
                                 <span class="terminal-dot"></span>
@@ -1218,7 +1227,7 @@ npm start</code></pre>
             </p>
             <a href="https://github.com/sponsors/nordevelopment" class="cyber-btn cyber-btn--magenta cyber-btn--lg"
                 target="_blank" style="margin-top: var(--space-md);">
-                <span>[ SPONSOR ON GITHUB ]</span>
+                <span>Sponsor on GitHub</span>
             </a>
         </div>
     </section>
@@ -1241,7 +1250,7 @@ npm start</code></pre>
             const code = pre.querySelector('code') ? pre.querySelector('code').innerText : pre.innerText;
             navigator.clipboard.writeText(code).then(() => {
                 const originalText = btn.innerHTML;
-                btn.innerHTML = '<span>[ COPIED! ]</span>';
+                btn.innerHTML = '<span>Copied</span>';
                 btn.style.borderColor = 'var(--cyber-green-500)';
                 btn.style.color = 'var(--cyber-green-500)';
                 setTimeout(() => {
@@ -1268,6 +1277,22 @@ npm start</code></pre>
     <!-- Mobile Nav Toggle -->
     <script>
         (function () {
+            const themeSelect = document.querySelector('.cyber-theme-select');
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+
+            if (themeSelect) {
+                themeSelect.value = currentTheme;
+                themeSelect.addEventListener('change', (event) => {
+                    const nextTheme = event.target.value === 'light' ? 'light' : 'dark';
+                    document.documentElement.setAttribute('data-theme', nextTheme);
+                    try {
+                        localStorage.setItem('ronin-theme', nextTheme);
+                    } catch (_) {
+                        // Theme still applies for the current page when storage is unavailable.
+                    }
+                });
+            }
+
             const burger = document.getElementById('navBurger');
             const links = document.getElementById('navLinks');
             if (!burger || !links) return;
