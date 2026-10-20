@@ -11,7 +11,8 @@
         content="AI Agent, Personal AI, RoninAgent, Web Scraper, PDF Generator, Document Generator, Image Generation, Task Scheduler, Telegram Bot, SQLite vector, Web UI, TypeScript, lightweight AI">
     <meta name="author" content="Norayr Petrosyan">
     <meta name="robots" content="index, follow">
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23042f3a'/%3E%3Cpath d='M17 46 46 17M18 17l29 29' stroke='%2322d3ee' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+    <link rel="icon"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23042f3a'/%3E%3Cpath d='M17 46 46 17M18 17l29 29' stroke='%2322d3ee' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -49,450 +50,30 @@
         })();
     </script>
 
-    <style>
-        /* Landing Page Custom Styling & Micro-Animations */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 var(--space-lg);
-        }
-
-        .section-hero {
-            padding: var(--space-2xl) 0 var(--space-1xl);
-            text-align: center;
-            border-bottom: 1px solid var(--color-border-default);
-            position: relative;
-            background: radial-gradient(circle at 50% 20%, rgba(0, 243, 255, 0.05) 0%, transparent 60%);
-        }
-
-        .section-padding {
-            padding: var(--space-2xl) 0;
-            border-bottom: 1px solid var(--color-border-default);
-        }
-
-        .hero-title {
-            font-family: var(--font-display);
-            font-size: clamp(2.2rem, 5vw, 3.8rem);
-            margin-bottom: var(--space-md);
-            letter-spacing: 0.08em;
-            color: var(--cyber-cyan-500);
-            text-shadow: var(--glow-text-cyan);
-            line-height: 1.15;
-        }
-
-        .hero-subtitle {
-            font-family: var(--font-body);
-            font-size: var(--text-lg);
-            max-width: 860px;
-            margin: 0 auto var(--space-xl);
-            color: var(--color-text-secondary);
-            line-height: 1.6;
-        }
-
-        .metrics-banner {
-            display: flex;
-            justify-content: center;
-            gap: var(--space-md);
-            flex-wrap: wrap;
-            margin: var(--space-lg) auto var(--space-xl);
-            max-width: 950px;
-        }
-
-        .metric-pill {
-            background: rgba(13, 17, 23, 0.8);
-            border: 1px solid var(--cyber-cyan-500);
-            box-shadow: 0 0 10px rgba(0, 243, 255, 0.15);
-            padding: 10px 18px;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-family: var(--font-mono);
-            font-size: var(--text-sm);
-        }
-
-        .metric-pill__val {
-            color: var(--cyber-cyan-500);
-            font-weight: 700;
-            text-shadow: var(--glow-text-cyan);
-        }
-
-        .hero-buttons {
-            display: flex;
-            gap: var(--space-md);
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .section-header {
-            text-align: center;
-            margin-bottom: var(--space-xl);
-        }
-
-        .section-title {
-            font-family: var(--font-display);
-            font-size: var(--text-3xl);
-            color: var(--cyber-cyan-500);
-            text-shadow: var(--glow-text-cyan);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            display: inline-block;
-            position: relative;
-        }
-
-        .section-title::after {
-            content: "";
-            position: absolute;
-            bottom: -10px;
-            left: 25%;
-            width: 50%;
-            height: 2px;
-            background: var(--cyber-magenta-500);
-            box-shadow: var(--glow-magenta);
-        }
-
-        .section-description {
-            font-family: var(--font-body);
-            color: var(--color-text-secondary);
-            max-width: 750px;
-            margin: var(--space-sm) auto 0;
-            font-size: var(--text-md);
-        }
-
-        /* Visual Setup Highlight Box */
-        .setup-wizard-box {
-            background: linear-gradient(135deg, rgba(13, 27, 42, 0.9) 0%, rgba(5, 10, 20, 0.95) 100%);
-            border: 1px solid var(--cyber-green-500);
-            box-shadow: 0 0 25px rgba(5, 255, 161, 0.2);
-            padding: var(--space-xl);
-            border-radius: 6px;
-            margin-bottom: var(--space-xl);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .setup-wizard-box::before {
-            content: "NO EDITING .ENV REQUIRED";
-            position: absolute;
-            top: 12px;
-            right: -30px;
-            background: var(--cyber-green-500);
-            color: #000;
-            font-family: var(--font-mono);
-            font-size: 10px;
-            font-weight: 800;
-            padding: 4px 35px;
-            transform: rotate(25deg);
-            letter-spacing: 1px;
-        }
-
-        .setup-steps-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: var(--space-md);
-            margin-top: var(--space-md);
-        }
-
-        .setup-step-card {
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid #f2f2f25f;
-            padding: var(--space-md);
-            border-radius: 4px;
-            transition: all 0.3s ease;
-        }
-
-        [data-theme='light'] .setup-step-card {
-            background: #f2f2f2;
-        }
-
-        .setup-step-card:hover {
-            border-color: var(--cyber-cyan-500);
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .step-num {
-            display: inline-block;
-            width: 28px;
-            height: 28px;
-            line-height: 26px;
-            text-align: center;
-            border-radius: 50%;
-            background: var(--cyber-cyan-500);
-            color: #000;
-            font-weight: 800;
-            font-family: var(--font-mono);
-            margin-bottom: var(--space-xs);
-        }
-
-        /* Terminal Box */
-        .terminal-box {
-            position: relative;
-            background: var(--cyber-void-900);
-            border: 1px solid var(--cyber-magenta-500);
-            box-shadow: inset 0 0 15px rgba(255, 42, 109, 0.15);
-            padding: var(--space-md);
-            margin-top: var(--space-xs);
-            font-family: var(--font-mono);
-            font-size: var(--text-sm);
-            color: var(--cyber-green-400);
-            overflow-x: auto;
-            border-radius: 4px;
-        }
-
-        .terminal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(255, 42, 109, 0.3);
-            margin-bottom: var(--space-sm);
-            padding-bottom: var(--space-3xs);
-            color: var(--cyber-magenta-500);
-            font-family: var(--font-display);
-            font-size: var(--text-xs);
-            letter-spacing: 0.1em;
-        }
-
-        .terminal-actions {
-            display: flex;
-            gap: var(--space-3xs);
-        }
-
-        .terminal-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--cyber-magenta-500);
-        }
-
-        .terminal-dot:nth-child(2) {
-            background: var(--cyber-cyan-500);
-        }
-
-        .terminal-dot:nth-child(3) {
-            background: var(--cyber-yellow-500);
-        }
-
-        .copy-btn {
-            position: absolute;
-            right: 12px;
-            top: 42px;
-        }
-
-        /* Highlight Text & Badges */
-        .highlight-text {
-            color: var(--cyber-cyan-500);
-            text-shadow: var(--glow-text-cyan);
-        }
-
-        .advantage-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border: 1px solid var(--cyber-green-500);
-            background: rgba(5, 255, 161, 0.1);
-            color: var(--cyber-green-500);
-            font-family: var(--font-mono);
-            font-size: var(--text-xs);
-            font-weight: 700;
-        }
-
-        /* Showcase Interactive Tabs */
-        .showcase-container {
-            background: var(--cyber-void-800);
-            border: 1px solid var(--cyber-cyan-500);
-            box-shadow: 0 0 20px rgba(0, 243, 255, 0.15);
-            border-radius: 6px;
-            overflow: hidden;
-            margin-top: var(--space-lg);
-        }
-
-        .showcase-tabs {
-            display: flex;
-            background: rgba(106, 106, 106, 0.6);
-            border-bottom: 1px solid var(--color-border-default);
-            overflow-x: auto;
-        }
-
-        .showcase-tab {
-            padding: var(--space-sm) var(--space-md);
-            font-family: var(--font-mono);
-            font-size: var(--text-xs);
-            color: var(--color-text-secondary);
-            background: transparent;
-            border: none;
-            border-bottom: 2px solid transparent;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.2s ease;
-        }
-
-        .showcase-tab:hover {
-            color: var(--cyber-cyan-500);
-        }
-
-        .showcase-tab.active {
-            color: var(--cyber-cyan-500);
-            border-bottom-color: var(--cyber-cyan-500);
-            background: rgba(0, 243, 255, 0.05);
-        }
-
-        .showcase-panel {
-            display: none;
-            padding: var(--space-lg);
-        }
-
-        .showcase-panel.active {
-            display: block;
-        }
-
-        .showcase-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: var(--space-md);
-        }
-
-        @media (max-width: 768px) {
-            .hero-title {
-                font-size: var(--text-2xl);
-            }
-
-            .showcase-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Model Ecosystem Badges */
-        .models-ecosystem {
-            margin: var(--space-lg) auto 0;
-            padding: var(--space-sm) var(--space-md);
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px dashed var(--cyber-cyan-500);
-            border-radius: 6px;
-            display: block;
-            max-width: 920px;
-        }
-
-        .models-title {
-            font-family: var(--font-mono);
-            font-size: var(--text-xs);
-            color: var(--cyber-cyan-500);
-            letter-spacing: 0.12em;
-            margin-bottom: var(--space-xs);
-            text-transform: uppercase;
-            font-weight: 700;
-        }
-
-        .models-list {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .model-chip {
-            background: rgba(0, 243, 255, 0.08);
-            border: 1px solid rgba(0, 243, 255, 0.3);
-            color: var(--color-text-primary);
-            padding: 4px 12px;
-            border-radius: 4px;
-            font-family: var(--font-mono);
-            font-size: var(--text-xs);
-            transition: all 0.2s ease;
-        }
-
-        .model-chip:hover {
-            border-color: var(--cyber-cyan-500);
-            box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
-            color: var(--cyber-cyan-500);
-            transform: translateY(-1px);
-        }
-
-        /* Real-World Use Cases Grid */
-        .use-case-card {
-            background: var(--cyber-void-800);
-            border: 1px solid var(--color-border-default);
-            padding: var(--space-lg);
-            border-radius: 6px;
-            position: relative;
-            transition: all 0.3s ease;
-        }
-
-        .use-case-card:hover {
-            border-color: var(--cyber-magenta-500);
-            box-shadow: 0 0 18px rgba(255, 42, 109, 0.2);
-            transform: translateY(-3px);
-        }
-
-        .use-case-badge {
-            font-family: var(--font-mono);
-            font-size: 11px;
-            padding: 3px 8px;
-            border-radius: 3px;
-            background: rgba(255, 42, 109, 0.15);
-            color: var(--cyber-magenta-500);
-            border: 1px solid var(--cyber-magenta-500);
-            display: inline-block;
-            margin-bottom: var(--space-xs);
-            font-weight: 700;
-        }
-
-        /* FAQ Section */
-        .faq-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-            gap: var(--space-md);
-        }
-
-        .faq-card {
-            background: rgba(13, 17, 23, 0.8);
-            border: 1px solid var(--color-border-default);
-            padding: var(--space-md);
-            border-radius: 6px;
-            transition: border-color 0.2s ease;
-        }
-
-        .faq-card:hover {
-            border-color: var(--cyber-cyan-500);
-        }
-
-        .faq-card h4 {
-            color: var(--cyber-cyan-500);
-            font-family: var(--font-display);
-            margin-bottom: var(--space-xs);
-            font-size: var(--text-md);
-            letter-spacing: 0.05em;
-        }
-
-        .faq-card p {
-            color: var(--color-text-secondary);
-            font-size: var(--text-sm);
-            line-height: 1.6;
-        }
-    </style>
     <link rel="stylesheet" href="frontend/css/landing.css">
 </head>
 
 <body>
 
     <!-- Primary navigation -->
-    <nav class="cyber-nav">
-        <a href="index.html" class="cyber-nav__brand">⚔️ RoninAgent</a>
-        <button class="cyber-nav__burger" id="navBurger" aria-label="Toggle navigation" aria-expanded="false">
+    <nav class="site-nav">
+        <a href="index.html" class="site-nav__brand">⚔️ RoninAgent</a>
+        <button class="site-nav__burger" id="navBurger" aria-label="Toggle navigation" aria-expanded="false">
             <span></span><span></span><span></span>
         </button>
-        <ul class="cyber-nav__links" id="navLinks">
-            <li><a href="index.html" class="cyber-nav__link cyber-nav__link--active">Home</a></li>
-            <li><a href="#capabilities" class="cyber-nav__link">Capabilities</a></li>
-            <li><a href="#scenarios" class="cyber-nav__link">Use Cases</a></li>
-            <li><a href="#setup" class="cyber-nav__link">Quick Start</a></li>
-            <li><a href="#faq" class="cyber-nav__link">FAQ</a></li>
-            <li><a href="docs.html" class="cyber-nav__link">Docs</a></li>
-            <li><a href="https://github.com/nordevelopment/RoninAgent" class="cyber-nav__link"
+        <ul class="site-nav__links" id="navLinks">
+            <li><a href="index.html" class="site-nav__link site-nav__link--active">Home</a></li>
+            <li><a href="#capabilities" class="site-nav__link">Capabilities</a></li>
+            <li><a href="#scenarios" class="site-nav__link">Use Cases</a></li>
+            <li><a href="#setup" class="site-nav__link">Quick Start</a></li>
+            <li><a href="#faq" class="site-nav__link">FAQ</a></li>
+            <li><a href="docs.html" class="site-nav__link">Docs</a></li>
+            <li><a href="https://github.com/nordevelopment/RoninAgent" class="site-nav__link"
                     target="_blank">GitHub</a>
             </li>
         </ul>
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <select class="cyber-select cyber-theme-select" style="padding: 4px 8px; font-size: 11px;">
+        <div class="site-nav__actions">
+            <select class="theme-select-control theme-select">
                 <option value="dark">🌙 Dark</option>
                 <option value="light">☀️ Light</option>
             </select>
@@ -504,9 +85,9 @@
         <div class="container">
             <h1 class="hero-title" data-text="RONIN AGENT">⚔️ RONIN AGENT</h1>
             <p class="hero-subtitle">
-                An ultra-fast, zero-bloat, 100% private <span class="highlight-text">Autonomous AI Agent</span> running
+                An ultra-fast, zero-bloat, local-first <span class="highlight-text">Autonomous AI Agent</span> running
                 directly on your hardware.
-                Built with pure TypeScript performance, sub-second cold starts, visual Web Setup Wizard, and an
+                Built with pure TypeScript performance, fast startup, a visual Web Setup Wizard, and an
                 autonomous tool engine for web scraping, document generation, image synthesis, and scheduled tasks.
             </p>
 
@@ -514,19 +95,19 @@
             <div class="metrics-banner">
                 <div class="metric-pill">
                     <span>⚡ Boot Speed:</span>
-                    <span class="metric-pill__val">&lt; 1 Second</span>
+                    <span class="metric-pill__val">1–3 Seconds</span>
                 </div>
                 <div class="metric-pill">
                     <span>💾 RAM Footprint:</span>
-                    <span class="metric-pill__val">~50 - 100 MB</span>
+                    <span class="metric-pill__val">~100–150 MB</span>
                 </div>
                 <div class="metric-pill">
                     <span>🐳 Docker:</span>
                     <span class="metric-pill__val">Zero (Native Node.js)</span>
                 </div>
                 <div class="metric-pill">
-                    <span>🔒 Privacy:</span>
-                    <span class="metric-pill__val">100% Self-Hosted</span>
+                    <span>🗄️ Data Storage:</span>
+                    <span class="metric-pill__val">Local SQLite</span>
                 </div>
                 <div class="metric-pill">
                     <span>💬 Dual Interface:</span>
@@ -550,15 +131,15 @@
                 </div>
             </div>
 
-            <div class="hero-buttons" style="margin-top: var(--space-lg);">
-                <a href="#setup" class="cyber-btn cyber-btn--magenta cyber-btn--lg">
+            <div class="hero-buttons">
+                <a href="#setup" class="btn btn--primary btn--lg">
                     <span>Quick Start</span>
                 </a>
-                <a href="#capabilities" class="cyber-btn cyber-btn--cyan cyber-btn--lg">
+                <a href="#capabilities" class="btn btn--primary btn--lg">
                     <span>Explore Capabilities</span>
                 </a>
-                <a href="https://github.com/nordevelopment/RoninAgent"
-                    class="cyber-btn cyber-btn--yellow cyber-btn--lg" target="_blank">
+                <a href="https://github.com/nordevelopment/RoninAgent" class="btn btn--secondary btn--lg"
+                    target="_blank">
                     <span>View on GitHub</span>
                 </a>
             </div>
@@ -577,15 +158,14 @@
                 </p>
             </div>
 
-            <div class="cyber-grid--3"
-                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-md);">
+            <div class="content-grid--3">
 
                 <!-- Web Scraper -->
-                <div class="cyber-card cyber-card--interactive">
-                    <div class="cyber-card__header">
-                        <div class="cyber-card__icon">🕸️</div>
-                        <h3 class="cyber-card__title">Smart Web Scraper</h3>
-                        <span class="cyber-card__badge">STATIC + SPA</span>
+                <div class="feature-card feature-card--interactive">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">🕸️</div>
+                        <h3 class="feature-card__title">Smart Web Scraper</h3>
+                        <span class="feature-card__badge">STATIC + SPA</span>
                     </div>
                     <p>
                         Dual-engine scraper: fast static HTML parsing via <code>cheerio</code> with automated fallback
@@ -595,11 +175,11 @@
                 </div>
 
                 <!-- PDF Generator -->
-                <div class="cyber-card cyber-card--interactive cyber-card--magenta">
-                    <div class="cyber-card__header">
-                        <div class="cyber-card__icon">📄</div>
-                        <h3 class="cyber-card__title">Visual PDF Generator</h3>
-                        <span class="cyber-card__badge">HTML TO PDF</span>
+                <div class="feature-card feature-card--interactive feature-card--teal">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">📄</div>
+                        <h3 class="feature-card__title">Visual PDF Generator</h3>
+                        <span class="feature-card__badge">HTML TO PDF</span>
                     </div>
                     <p>
                         The AI designs custom, responsive HTML/CSS layouts and compiles pixel-perfect A4 PDF reports,
@@ -608,11 +188,11 @@
                 </div>
 
                 <!-- Office Document Generator -->
-                <div class="cyber-card cyber-card--interactive cyber-card--green">
-                    <div class="cyber-card__header">
-                        <div class="cyber-card__icon">📊</div>
-                        <h3 class="cyber-card__title">Office Generator</h3>
-                        <span class="cyber-card__badge">EXCEL + WORD</span>
+                <div class="feature-card feature-card--interactive feature-card--emerald">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">📊</div>
+                        <h3 class="feature-card__title">Office Generator</h3>
+                        <span class="feature-card__badge">EXCEL + WORD</span>
                     </div>
                     <p>
                         Native creation of structured Excel spreadsheets (<code>.xlsx</code>) with formula support,
@@ -622,11 +202,11 @@
                 </div>
 
                 <!-- AI Image Generation -->
-                <div class="cyber-card cyber-card--interactive cyber-card--yellow">
-                    <div class="cyber-card__header">
-                        <div class="cyber-card__icon">🎨</div>
-                        <h3 class="cyber-card__title">AI Image Generation</h3>
-                        <span class="cyber-card__badge">TOGETHER + GROK</span>
+                <div class="feature-card feature-card--interactive feature-card--amber">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">🎨</div>
+                        <h3 class="feature-card__title">AI Image Generation</h3>
+                        <span class="feature-card__badge">TOGETHER + GROK</span>
                     </div>
                     <p>
                         Direct text-to-image synthesis in chat using <strong>Together AI</strong> or <strong>X.AI
@@ -635,11 +215,11 @@
                 </div>
 
                 <!-- Task Management & Background Scheduler -->
-                <div class="cyber-card cyber-card--interactive">
-                    <div class="cyber-card__header">
-                        <div class="cyber-card__icon">⏱️</div>
-                        <h3 class="cyber-card__title">Task Scheduler</h3>
-                        <span class="cyber-card__badge">AUTONOMOUS</span>
+                <div class="feature-card feature-card--interactive">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">⏱️</div>
+                        <h3 class="feature-card__title">Task Scheduler</h3>
+                        <span class="feature-card__badge">AUTONOMOUS</span>
                     </div>
                     <p>
                         Schedule autonomous background tasks with cron expressions or timers. Scans every 60s, executes
@@ -648,11 +228,11 @@
                 </div>
 
                 <!-- Dynamic E-Commerce & Agent Skills -->
-                <div class="cyber-card cyber-card--interactive cyber-card--magenta">
-                    <div class="cyber-card__header">
-                        <div class="cyber-card__icon">🛒</div>
-                        <h3 class="cyber-card__title">Dynamic Agent Skills</h3>
-                        <span class="cyber-card__badge">TOKEN SAVER</span>
+                <div class="feature-card feature-card--interactive feature-card--teal">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">🛒</div>
+                        <h3 class="feature-card__title">Dynamic Agent Skills</h3>
+                        <span class="feature-card__badge">TOKEN SAVER</span>
                     </div>
                     <p>
                         Modular Markdown skills (`agents/&lt;agentId&gt;/skills/*.md`). Pre-configured parsing rules for
@@ -663,11 +243,11 @@
                 </div>
 
                 <!-- Dual Interface -->
-                <div class="cyber-card cyber-card--interactive cyber-card--yellow">
-                    <div class="cyber-card__header">
-                        <div class="cyber-card__icon">💬</div>
-                        <h3 class="cyber-card__title">Dual Interfaces</h3>
-                        <span class="cyber-card__badge">WEB UI + TELEGRAM</span>
+                <div class="feature-card feature-card--interactive feature-card--amber">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">💬</div>
+                        <h3 class="feature-card__title">Dual Interfaces</h3>
+                        <span class="feature-card__badge">WEB UI + TELEGRAM</span>
                     </div>
                     <p>
                         Modern local Web UI for desktop productivity + remote Telegram bot with
@@ -676,11 +256,11 @@
                 </div>
 
                 <!-- Hybrid Vector RAG Memory -->
-                <div class="cyber-card cyber-card--interactive cyber-card--green">
-                    <div class="cyber-card__header">
-                        <div class="cyber-card__icon">🧠</div>
-                        <h3 class="cyber-card__title">Hybrid Vector Memory</h3>
-                        <span class="cyber-card__badge">SQLITE + VEC</span>
+                <div class="feature-card feature-card--interactive feature-card--emerald">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">🧠</div>
+                        <h3 class="feature-card__title">Hybrid Vector Memory</h3>
+                        <span class="feature-card__badge">SQLITE + VEC</span>
                     </div>
                     <p>
                         Zero external database overhead (no Docker/Postgres/Pinecone). Embedded SQLite combined with
@@ -689,11 +269,11 @@
                 </div>
 
                 <!-- Local AI Vision -->
-                <div class="cyber-card cyber-card--interactive">
-                    <div class="cyber-card__header">
-                        <div class="cyber-card__icon">👁️</div>
-                        <h3 class="cyber-card__title">Local AI Vision</h3>
-                        <span class="cyber-card__badge">MULTIMEDIA</span>
+                <div class="feature-card feature-card--interactive">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">👁️</div>
+                        <h3 class="feature-card__title">Local AI Vision</h3>
+                        <span class="feature-card__badge">MULTIMEDIA</span>
                     </div>
                     <p>
                         Attach images directly into the chat interface. High-performance local resizing and optimization
@@ -706,7 +286,7 @@
     </section>
 
     <!-- Real-World Automation Use Cases & Scenarios -->
-    <section id="scenarios" class="section-padding" style="background: rgba(0, 0, 0, 0.2);">
+    <section id="scenarios" class="section-padding section-alt">
         <div class="container">
             <div class="section-header">
                 <h2 class="section-title">🚀 Real-World Automation Scenarios</h2>
@@ -715,16 +295,14 @@
                 </p>
             </div>
 
-            <div class="cyber-grid--2"
-                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-lg);">
+            <div class="content-grid--2">
 
                 <div class="use-case-card">
                     <span class="use-case-badge">E-COMMERCE & COMPETITOR INTEL</span>
-                    <h3
-                        style="color: var(--cyber-cyan-500); font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: 8px;">
+                    <h3>
                         🛒 Price Tracking & Market Spreadsheets
                     </h3>
-                    <p style="color: var(--color-text-secondary); line-height: 1.6; font-size: var(--text-sm);">
+                    <p>
                         Scrape product specs and live prices across Amazon, Wildberries, Ozon, or Temu. The agent parses
                         SPA JavaScript rendering silently and exports styled Excel <code>.xlsx</code> sheets with
                         calculated price comparisons.
@@ -733,11 +311,10 @@
 
                 <div class="use-case-card">
                     <span class="use-case-badge">REMOTE WORKFLOWS</span>
-                    <h3
-                        style="color: var(--cyber-magenta-500); font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: 8px;">
+                    <h3>
                         📱 Mobile Assistant via Telegram
                     </h3>
-                    <p style="color: var(--color-text-secondary); line-height: 1.6; font-size: var(--text-sm);">
+                    <p>
                         Control your local AI assistant on the go. Send voice notes, photos, or prompts to your Telegram
                         bot. Secured with user ID whitelist so only you have remote command access.
                     </p>
@@ -745,11 +322,10 @@
 
                 <div class="use-case-card">
                     <span class="use-case-badge">BUSINESS DELIVERABLES</span>
-                    <h3
-                        style="color: var(--cyber-green-500); font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: 8px;">
+                    <h3>
                         📄 Instant Client PDF Reports & Word Docs
                     </h3>
-                    <p style="color: var(--color-text-secondary); line-height: 1.6; font-size: var(--text-sm);">
+                    <p>
                         Turn chat discussions into styled A4 PDF documents with custom CSS styling or editable Word
                         <code>.docx</code> contracts directly stored into your local <code>workspace/</code> directory.
                     </p>
@@ -757,11 +333,10 @@
 
                 <div class="use-case-card">
                     <span class="use-case-badge">SILENT AUTOMATION</span>
-                    <h3
-                        style="color: var(--cyber-yellow-500); font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: 8px;">
+                    <h3>
                         ⏱️ 24/7 Background Task Monitor
                     </h3>
-                    <p style="color: var(--color-text-secondary); line-height: 1.6; font-size: var(--text-sm);">
+                    <p>
                         Schedule periodic web checks or API monitors using Cron syntax. The agent runs silently in the
                         background every 60s and pushes instant digests or alerts straight to your phone.
                     </p>
@@ -794,16 +369,14 @@
                 <div class="showcase-panel active">
                     <div class="showcase-grid">
                         <div>
-                            <h4 style="color: var(--cyber-cyan-500); margin-bottom: 8px;">User Prompt:</h4>
-                            <p
-                                style="font-family: var(--font-mono); font-size: var(--text-sm); background: rgba(0,0,0,0.5); padding: 12px; border-left: 3px solid var(--cyber-cyan-500);">
+                            <h4>User Prompt:</h4>
+                            <p>
                                 "Scrape the current pricing and specs of top wireless headphones on Amazon and summarize
                                 key specs."
                             </p>
-                            <h4 style="color: var(--cyber-green-500); margin-top: 15px; margin-bottom: 8px;">Tool
+                            <h4>Tool
                                 Execution:</h4>
-                            <ul
-                                style="font-size: var(--text-sm); color: var(--color-text-secondary); line-height: 1.6; list-style: square; padding-left: 20px;">
+                            <ul>
                                 <li>Dynamically loads <code>skills/amazon.md</code> parsing rules.</li>
                                 <li>Calls <code>scrape_web_page({ url, renderJs: true })</code>.</li>
                                 <li>Attempts fast static extraction via <code>cheerio</code>.</li>
@@ -811,7 +384,7 @@
                                 <li>Strips bloat HTML & outputs clean markdown table to LLM context.</li>
                             </ul>
                         </div>
-                        <div class="terminal-box" style="margin-top: 0;">
+                        <div class="terminal-box">
                             <div class="terminal-header">
                                 <span>Agent output · Web scraper log</span>
                             </div>
@@ -833,24 +406,22 @@
                 <div class="showcase-panel">
                     <div class="showcase-grid">
                         <div>
-                            <h4 style="color: var(--cyber-magenta-500); margin-bottom: 8px;">User Prompt:</h4>
-                            <p
-                                style="font-family: var(--font-mono); font-size: var(--text-sm); background: rgba(0,0,0,0.5); padding: 12px; border-left: 3px solid var(--cyber-magenta-500);">
+                            <h4>User Prompt:</h4>
+                            <p>
                                 "Create a professional A4 sales report PDF with header styles, summary table, and
                                 footer."
                             </p>
-                            <h4 style="color: var(--cyber-green-500); margin-top: 15px; margin-bottom: 8px;">Tool
+                            <h4>Tool
                                 Execution:</h4>
-                            <ul
-                                style="font-size: var(--text-sm); color: var(--color-text-secondary); line-height: 1.6; list-style: square; padding-left: 20px;">
+                            <ul>
                                 <li>LLM writes custom styled HTML/CSS code snippet.</li>
                                 <li>Calls <code>generate_pdf({ html, filename: 'sales_report.pdf' })</code>.</li>
                                 <li>Renders pixel-perfect A4 PDF document using Puppeteer.</li>
                                 <li>Saves result into local <code>workspace/sales_report.pdf</code>.</li>
                             </ul>
                         </div>
-                        <div class="terminal-box" style="margin-top: 0; border-color: var(--cyber-magenta-500);">
-                            <div class="terminal-header" style="color: var(--cyber-magenta-500);">
+                        <div class="terminal-box">
+                            <div class="terminal-header">
                                 <span>Agent output · PDF generator log</span>
                             </div>
                             <pre><code>[TOOL] Executing generate_pdf...
@@ -866,16 +437,14 @@
                 <div class="showcase-panel">
                     <div class="showcase-grid">
                         <div>
-                            <h4 style="color: var(--cyber-green-500); margin-bottom: 8px;">User Prompt:</h4>
-                            <p
-                                style="font-family: var(--font-mono); font-size: var(--text-sm); background: rgba(0,0,0,0.5); padding: 12px; border-left: 3px solid var(--cyber-green-500);">
+                            <h4>User Prompt:</h4>
+                            <p>
                                 "Generate an Excel spreadsheet for monthly expenses with columns for Category, Budget,
                                 Actual, Difference, and SUM formulas."
                             </p>
-                            <h4 style="color: var(--cyber-cyan-500); margin-top: 15px; margin-bottom: 8px;">Tool
+                            <h4>Tool
                                 Execution:</h4>
-                            <ul
-                                style="font-size: var(--text-sm); color: var(--color-text-secondary); line-height: 1.6; list-style: square; padding-left: 20px;">
+                            <ul>
                                 <li>Calls <code>generate_excel_document({ sheets, filename })</code> or
                                     <code>generate_word_document</code>.
                                 </li>
@@ -883,8 +452,8 @@
                                 <li>Saves directly to <code>workspace/Expenses_August.xlsx</code>.</li>
                             </ul>
                         </div>
-                        <div class="terminal-box" style="margin-top: 0; border-color: var(--cyber-green-500);">
-                            <div class="terminal-header" style="color: var(--cyber-green-500);">
+                        <div class="terminal-box">
+                            <div class="terminal-header">
                                 <span>Agent output · Office generator log</span>
                             </div>
                             <pre><code>[TOOL] Executing generate_excel_document...
@@ -900,24 +469,22 @@
                 <div class="showcase-panel">
                     <div class="showcase-grid">
                         <div>
-                            <h4 style="color: var(--cyber-yellow-500); margin-bottom: 8px;">User Prompt:</h4>
-                            <p
-                                style="font-family: var(--font-mono); font-size: var(--text-sm); background: rgba(0,0,0,0.5); padding: 12px; border-left: 3px solid var(--cyber-yellow-500);">
+                            <h4>User Prompt:</h4>
+                            <p>
                                 "Every morning at 09:00, scrape tech news, generate a summary, and send it to my
                                 Telegram channel."
                             </p>
-                            <h4 style="color: var(--cyber-green-500); margin-top: 15px; margin-bottom: 8px;">Tool
+                            <h4>Tool
                                 Execution:</h4>
-                            <ul
-                                style="font-size: var(--text-sm); color: var(--color-text-secondary); line-height: 1.6; list-style: square; padding-left: 20px;">
+                            <ul>
                                 <li>Creates background task record with cron expression `0 9 * * *`.</li>
                                 <li>Internal scheduler engine scans every 60s in the background.</li>
                                 <li>Triggers autonomous workflow silently without manual intervention.</li>
                                 <li>Sends execution status report directly to user's Telegram.</li>
                             </ul>
                         </div>
-                        <div class="terminal-box" style="margin-top: 0; border-color: var(--cyber-yellow-500);">
-                            <div class="terminal-header" style="color: var(--cyber-yellow-500);">
+                        <div class="terminal-box">
+                            <div class="terminal-header">
                                 <span>Agent output · Background scheduler log</span>
                             </div>
                             <pre><code>[SCHEDULER] Task #42 triggered (Cron: 0 9 * * *).
@@ -933,22 +500,20 @@
                 <div class="showcase-panel">
                     <div class="showcase-grid">
                         <div>
-                            <h4 style="color: var(--cyber-cyan-500); margin-bottom: 8px;">User Prompt:</h4>
-                            <p
-                                style="font-family: var(--font-mono); font-size: var(--text-sm); background: rgba(0,0,0,0.5); padding: 12px; border-left: 3px solid var(--cyber-cyan-500);">
+                            <h4>User Prompt:</h4>
+                            <p>
                                 "Generate a futuristic cyberpunk city skyline illuminated with cyan and neon magenta
                                 lights."
                             </p>
-                            <h4 style="color: var(--cyber-green-500); margin-top: 15px; margin-bottom: 8px;">Tool
+                            <h4>Tool
                                 Execution:</h4>
-                            <ul
-                                style="font-size: var(--text-sm); color: var(--color-text-secondary); line-height: 1.6; list-style: square; padding-left: 20px;">
+                            <ul>
                                 <li>Calls <code>generate_image({ prompt })</code>.</li>
                                 <li>Checks API provider priority (Together AI vs X.AI Grok).</li>
                                 <li>Synthesizes image and streams image binary back to UI & Telegram.</li>
                             </ul>
                         </div>
-                        <div class="terminal-box" style="margin-top: 0;">
+                        <div class="terminal-box">
                             <div class="terminal-header">
                                 <span>Agent output · Image generator log</span>
                             </div>
@@ -977,11 +542,11 @@
             </div>
 
             <!-- Setup Wizard Highlight Box -->
-            <div class="setup-wizard-box cyber-card">
-                <h3 class="highlight-text" style="font-size: var(--text-xl); margin-bottom: var(--space-xs);">
+            <div class="setup-wizard-box feature-card">
+                <h3 class="highlight-text">
                     ✨ Visual Web Settings Panel (`/settings`)
                 </h3>
-                <p style="color: var(--color-text-secondary); line-height: 1.6; max-width: 900px;">
+                <p>
                     When you run RoninAgent for the first time, it automatically detects missing configuration and
                     opens the <strong>Web Setup Wizard</strong>. Easily enter your API keys (OpenRouter, Gemini, OpenAI,
                     Together AI, Grok), set up local LLMs (Ollama, LM Studio), configure your Telegram Bot whitelist,
@@ -991,24 +556,24 @@
                 <div class="setup-steps-grid">
                     <div class="setup-step-card">
                         <span class="step-num">1</span>
-                        <h4 style="color: var(--cyber-cyan-500); margin-bottom: 6px;">Clone or Download</h4>
-                        <p style="font-size: var(--text-sm); color: var(--color-text-secondary);">
+                        <h4>Clone or Download</h4>
+                        <p>
                             Clone the repository or download the ZIP archive directly from GitHub.
                         </p>
                     </div>
 
                     <div class="setup-step-card">
                         <span class="step-num">2</span>
-                        <h4 style="color: var(--cyber-green-500); margin-bottom: 6px;">Run Setup Command</h4>
-                        <p style="font-size: var(--text-sm); color: var(--color-text-secondary);">
+                        <h4>Run Setup Command</h4>
+                        <p>
                             Run <code>npm start</code> or double-click <code>run.bat</code> on Windows.
                         </p>
                     </div>
 
                     <div class="setup-step-card">
                         <span class="step-num">3</span>
-                        <h4 style="color: var(--cyber-yellow-500); margin-bottom: 6px;">Visual Web Configuration</h4>
-                        <p style="font-size: var(--text-sm); color: var(--color-text-secondary);">
+                        <h4>Visual Web Configuration</h4>
+                        <p>
                             Open <code>http://127.0.0.1:3000</code> in your browser. Configure API keys and settings
                             visually!
                         </p>
@@ -1017,11 +582,10 @@
             </div>
 
             <!-- Code Command Boxes -->
-            <div class="cyber-grid--2">
+            <div class="content-grid--2">
                 <div>
                     <h3 class="highlight-text">Standard npm installation</h3>
-                    <p
-                        style="color: var(--color-text-secondary); margin-bottom: var(--space-xs); font-size: var(--text-sm);">
+                    <p>
                         Requires Node.js (v20+) and npm (v9+). Fast and simple:
                     </p>
 
@@ -1038,15 +602,14 @@
 cd RoninAgent
 npm install
 npm start</code></pre>
-                        <button class="cyber-btn cyber-btn--sm cyber-btn--cyan copy-btn"
+                        <button class="btn btn--sm btn--primary copy-btn"
                             onclick="copyCode(this)">Copy</button>
                     </div>
                 </div>
 
                 <div>
                     <h3 class="highlight-text">Windows one-click launch (`run.bat`)</h3>
-                    <p
-                        style="color: var(--color-text-secondary); margin-bottom: var(--space-xs); font-size: var(--text-sm);">
+                    <p>
                         Download the ZIP file, extract it, and simply run the batch launcher:
                     </p>
 
@@ -1062,7 +625,7 @@ npm start</code></pre>
                         <pre><code># Double-click 'run.bat' in the project directory
 # Or execute from command prompt:
 .\run.bat</code></pre>
-                        <button class="cyber-btn cyber-btn--sm cyber-btn--cyan copy-btn"
+                        <button class="btn btn--sm btn--primary copy-btn"
                             onclick="copyCode(this)">Copy</button>
                     </div>
                 </div>
@@ -1082,8 +645,8 @@ npm start</code></pre>
                 </p>
             </div>
 
-            <div class="cyber-table-wrapper">
-                <table class="cyber-table cyber-table--striped cyber-table--bordered">
+            <div class="data-table-wrapper">
+                <table class="data-table data-table--striped data-table--bordered">
                     <thead>
                         <tr>
                             <th>Metric / Feature</th>
@@ -1097,7 +660,7 @@ npm start</code></pre>
                     <tbody>
                         <tr class="row-highlight">
                             <td><strong>RAM Footprint</strong></td>
-                            <td><span class="advantage-badge">~50 - 100 MB</span></td>
+                            <td><span class="advantage-badge">~100–150 MB</span></td>
                             <td>1.5 GB+ (Docker)</td>
                             <td>1 GB+ (Docker Compose)</td>
                             <td>500 MB+ (Electron/Docker)</td>
@@ -1105,7 +668,7 @@ npm start</code></pre>
                         </tr>
                         <tr>
                             <td><strong>Startup Time</strong></td>
-                            <td><span class="advantage-badge">&lt; 1 second</span></td>
+                            <td><span class="advantage-badge">1–3 seconds</span></td>
                             <td>30 - 60 seconds</td>
                             <td>30 - 60 seconds</td>
                             <td>10 - 20 seconds</td>
@@ -1186,11 +749,11 @@ npm start</code></pre>
                 </div>
 
                 <div class="faq-card">
-                    <h4>Is my chat data and memory 100% private?</h4>
+                    <h4>Where are my chat data and memory stored?</h4>
                     <p>
-                        Yes. RoninAgent is 100% self-hosted. All conversation logs, document workspace outputs, and
-                        vector RAG embeddings are saved inside your local SQLite database file on your hard drive. Zero
-                        external analytics.
+                        Conversation history, settings, memory, and generated files are stored locally. Requests are
+                        sent only to the AI providers and integrations you configure, such as OpenAI, Gemini,
+                        OpenRouter, or Telegram.
                     </p>
                 </div>
 
@@ -1199,8 +762,8 @@ npm start</code></pre>
                     <p>
                         While typical Web UIs are simple chat interfaces, RoninAgent is a full <strong>autonomous
                             tool-executing agent</strong>. It generates styled A4 PDFs, native Excel/Word documents,
-                        scrapes dynamic web pages, and executes background scheduled tasks with sub-second boot times
-                        (~50MB RAM vs 1.5GB+ Docker containers).
+                        scrapes dynamic web pages, and executes background scheduled tasks with a 1–3 second startup
+                        time (~100–150 MB RAM vs 1.5 GB+ Docker containers).
                     </p>
                 </div>
 
@@ -1218,23 +781,22 @@ npm start</code></pre>
     </section>
 
     <!-- Support Section -->
-    <section id="support" class="section-padding" style="text-align: center;">
+    <section id="support" class="section-padding support-section">
         <div class="container">
             <h2 class="section-title">💖 Support RoninAgent</h2>
-            <p class="hero-subtitle" style="margin-top: var(--space-md);">
+            <p class="hero-subtitle">
                 RoninAgent is 100% open-source and free under the MIT License. If it saved your hardware resources and
                 boosted your AI workflow, consider supporting our project!
             </p>
-            <a href="https://github.com/sponsors/nordevelopment" class="cyber-btn cyber-btn--magenta cyber-btn--lg"
-                target="_blank" style="margin-top: var(--space-md);">
+            <a href="https://github.com/sponsors/nordevelopment" class="btn btn--primary btn--lg support-section__cta"
+                target="_blank">
                 <span>Sponsor on GitHub</span>
             </a>
         </div>
     </section>
 
     <!-- Footer -->
-    <footer
-        style="background: var(--cyber-void-800); border-top: 1px solid var(--color-border-default); padding: var(--space-lg) 0; text-align: center; font-family: var(--font-mono); font-size: var(--text-sm);">
+    <footer class="site-footer">
         <div class="container">
             <p><strong class="highlight-text">RoninAgent</strong></p>
             <p>Author: Norayr Petrosyan</p>
@@ -1251,8 +813,8 @@ npm start</code></pre>
             navigator.clipboard.writeText(code).then(() => {
                 const originalText = btn.innerHTML;
                 btn.innerHTML = '<span>Copied</span>';
-                btn.style.borderColor = 'var(--cyber-green-500)';
-                btn.style.color = 'var(--cyber-green-500)';
+                btn.style.borderColor = 'var(--accent-emerald)';
+                btn.style.color = 'var(--accent-emerald)';
                 setTimeout(() => {
                     btn.innerHTML = originalText;
                     btn.style.borderColor = '';
@@ -1277,7 +839,7 @@ npm start</code></pre>
     <!-- Mobile Nav Toggle -->
     <script>
         (function () {
-            const themeSelect = document.querySelector('.cyber-theme-select');
+            const themeSelect = document.querySelector('.theme-select');
             const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
 
             if (themeSelect) {
@@ -1298,25 +860,25 @@ npm start</code></pre>
             if (!burger || !links) return;
 
             burger.addEventListener('click', () => {
-                const isOpen = burger.classList.toggle('cyber-nav__burger--open');
-                links.classList.toggle('cyber-nav__links--open', isOpen);
+                const isOpen = burger.classList.toggle('site-nav__burger--open');
+                links.classList.toggle('site-nav__links--open', isOpen);
                 burger.setAttribute('aria-expanded', isOpen);
             });
 
             // Close menu on link click
-            links.querySelectorAll('.cyber-nav__link').forEach(link => {
+            links.querySelectorAll('.site-nav__link').forEach(link => {
                 link.addEventListener('click', () => {
-                    burger.classList.remove('cyber-nav__burger--open');
-                    links.classList.remove('cyber-nav__links--open');
+                    burger.classList.remove('site-nav__burger--open');
+                    links.classList.remove('site-nav__links--open');
                     burger.setAttribute('aria-expanded', 'false');
                 });
             });
 
             // Close menu on outside click
             document.addEventListener('click', (e) => {
-                if (!e.target.closest('.cyber-nav')) {
-                    burger.classList.remove('cyber-nav__burger--open');
-                    links.classList.remove('cyber-nav__links--open');
+                if (!e.target.closest('.site-nav')) {
+                    burger.classList.remove('site-nav__burger--open');
+                    links.classList.remove('site-nav__links--open');
                     burger.setAttribute('aria-expanded', 'false');
                 }
             });
