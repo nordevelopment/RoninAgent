@@ -8,6 +8,12 @@ import { Message, CreateMessage } from '../models/message.js';
 import { Session } from '../models/session.js';
 import { DatabaseClient } from '../database/DatabaseClient.js';
 
+/**
+ * History message with its database id. The id is a stable position marker
+ * used by context-window logic; it is never sent to the AI API.
+ */
+export type StoredMessage = AIMessages & { id: number };
+
 export class ChatHistoryManager {
   private messageModel: Message;
   private sessionModel: Session;
@@ -22,7 +28,7 @@ export class ChatHistoryManager {
    * @param sessionId - session ID
    * @returns array of messages
    */
-  async getHistory(sessionId: string): Promise<AIMessages[]> {
+  async getHistory(sessionId: string): Promise<StoredMessage[]> {
 
     const messages = await this.messageModel.findBySessionId(sessionId);
     return messages.map(msg => {
@@ -34,7 +40,8 @@ export class ChatHistoryManager {
           // ignore
         }
       }
-      const result: AIMessages = {
+      const result: StoredMessage = {
+        id: msg.id,
         role: msg.role,
         content: content,
       };

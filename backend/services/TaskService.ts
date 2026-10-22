@@ -122,6 +122,10 @@ export class TaskService {
 
         // Execute task instruction inside its dedicated session
         const response = await this.chatManager.sendMessage(task.title, taskSessionId);
+        if (response.error) {
+          // Route through the failure branch so the task is marked failed, not "done" with an error text
+          throw new Error(response.error.message);
+        }
 
         // Check if task is recurring (CRON or repeat interval)
         const nextRunIso = getNextRunTime(task);

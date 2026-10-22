@@ -284,6 +284,112 @@ describe('AIClient Tests', () => {
 
       const response = await aiClient.sendMessage([{ role: 'user', content: 'Hello' }]);
       expect(response.content).toContain('Error: AI response Rate limit exceeded');
+      expect(response.error).toEqual({ kind: 'api', message: 'Rate limit exceeded', status: undefined });
+    });
+
+    it('classifies a context-length error as context_overflow', async () => {
+      vi.spyOn(axios, 'isAxiosError').mockReturnValue(true);
+      (axios.post as any).mockRejectedValueOnce({
+        isAxiosError: true,
+        message: 'Request failed with status code 400',
+        response: {
+          status: 400,
+          data: {
+            error: {
+              message: "This endpoint's maximum context length is 131072 tokens. However, you requested about 150000 tokens."
+            }
+          }
+        }
+      });
+
+      const response = await aiClient.sendMessage([{ role: 'user', content: 'Hello' }]);
+      expect(response.error?.kind).toBe('context_overflow');
+      expect(response.error?.status).toBe(400);
+    });
+
+    it('classifies OpenAI context_length_exceeded code as context_overflow', async () => {
+      vi.spyOn(axios, 'isAxiosError').mockReturnValue(true);
+      (axios.post as any).mockRejectedValueOnce({
+        isAxiosError: true,
+        message: 'Request failed with status code 400',
+        response: {
+          status: 400,
+          data: { error: { message: 'Input is invalid.', code: 'context_length_exceeded' } }
+        }
+      });
+
+      const response = await aiClient.sendMessage([{ role: 'user', content: 'Hello' }]);
+      expect(response.error?.kind).toBe('context_overflow');
+    });
+
+    it('does not treat a 429 token rate limit as context_overflow', async () => {
+      vi.spyOn(axios, 'isAxiosError').mockReturnValue(true);
+      (axios.post as any).mockRejectedValueOnce({
+        isAxiosError: true,
+        message: 'Request failed with status code 429',
+        response: {
+          status: 429,
+          data: { error: { message: 'Too many tokens per minute. Please slow down.' } }
+        }
+      });
+
+      const response = await aiClient.sendMessage([{ role: 'user', content: 'Hello' }]);
+      expect(response.error?.kind).toBe('api');
+    });
+
+    it('returns a structured error when the provider reports an error with HTTP 200', async () => {
+      (axios.post as any).mockResolvedValueOnce({
+        data: { error: { code: 502, message: 'Upstream provider unavailable' } }
+      });
+
+      const response = await aiClient.sendMessage([{ role: 'user', content: 'Hello' }]);
+      expect(response.content).toBe('Error: AI response Upstream provider unavailable');
+      expect(response.error).toEqual({ kind: 'api', message: 'Upstream provider unavailable', status: 502 });
+    });
+
+    it('parses token usage from the response', async () => {
+      (axios.post as any).mockResolvedValueOnce({
+        data: {
+          choices: [{ message: { role: 'assistant', content: 'OK' } }],
+          usage: { prompt_tokens: 1234, completion_tokens: 56, total_tokens: 1290 }
+        }
+      });
+
+      const response = await aiClient.sendMessage([{ role: 'user', content: 'Hello' }]);
+      expect(response.usage).toEqual({ promptTokens: 1234, completionTokens: 56 });
+      expect(response.error).toBeUndefined();
+    });
+
+    it('leaves usage undefined when the provider does not report it', async () => {
+      (axios.post as any).mockResolvedValueOnce({
+        data: { choices: [{ message: { role: 'assistant', content: 'OK' } }] }
+      });
+
+      const response = await aiClient.sendMessage([{ role: 'user', content: 'Hello' }]);
+      expect(response.usage).toBeUndefined();
+    });
+
+    it('sends only API message fields and drops history-only fields like id', async () => {
+      (axios.post as any).mockResolvedValueOnce({
+        data: { choices: [{ message: { role: 'assistant', content: 'OK' } }] }
+      });
+
+      const toolCalls = [{ id: 'call_1', type: 'function' as const, function: { name: 'read_file', arguments: '{}' } }];
+      const history = [
+        { id: 1, role: 'user', content: 'Read it' },
+        { id: 2, role: 'assistant', content: '', tool_calls: toolCalls },
+        { id: 3, role: 'tool', content: '{"ok":true}', tool_call_id: 'call_1' }
+      ] as AIMessages[];
+
+      await aiClient.sendMessage(history, 'main_agent', undefined, undefined, true);
+      const [, body] = (axios.post as any).mock.calls[0];
+      const sent = body.messages.filter((m: any) => m.role !== 'system');
+
+      expect(sent).toEqual([
+        { role: 'user', content: 'Read it' },
+        { role: 'assistant', content: '', tool_calls: toolCalls },
+        { role: 'tool', content: '{"ok":true}', tool_call_id: 'call_1' }
+      ]);
     });
 
     it('handles unexpected empty response from AI', async () => {
@@ -302,6 +408,7 @@ describe('AIClient Tests', () => {
 
       const response = await aiClient.sendMessage([{ role: 'user', content: 'Hello' }]);
       expect(response.content).toBe('Error: AI response not received');
+      expect(response.error?.kind).toBe('empty_response');
     });
   });
 

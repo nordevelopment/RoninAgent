@@ -29,13 +29,68 @@ export interface AIMessages {
   tool_calls?: AIToolCall[];    // For role: 'assistant' when calling tools
 }
 
+export type AIErrorKind = 'context_overflow' | 'cancelled' | 'empty_response' | 'api';
+
+export interface AIError {
+  kind: AIErrorKind;
+  message: string;
+  status?: number;
+}
+
 export interface AIResponse {
+  /** On error: a user-facing "Error: ..." text, kept for callers that only display content */
   content: string;
   toolCalls?: AIToolCall[];
   reasoning?: string;
   usage?: {
     promptTokens: number;
     completionTokens: number;
+  };
+  /** Set when the request failed; such a response must not be stored as an assistant answer */
+  error?: AIError;
+}
+
+const CONTEXT_OVERFLOW_PATTERN = /context length|context_length_exceeded|maximum context|too many tokens|prompt is too long|reduce the length/i;
+
+/**
+ * Rate-limit errors (429) also mention tokens ("tokens per minute"), so they are never treated as overflow.
+ */
+export function classifyApiError(status: number | undefined, message: string, code?: unknown): AIErrorKind {
+  if (status === 429) {
+    return 'api';
+  }
+  if (code === 'context_length_exceeded' || CONTEXT_OVERFLOW_PATTERN.test(message)) {
+    return 'context_overflow';
+  }
+  return 'api';
+}
+
+/**
+ * Copies only the fields the chat-completions API accepts. History messages carry extra
+ * fields (e.g. database id) and strict providers reject unknown message properties.
+ */
+function toApiMessage(msg: AIMessages): AIMessages {
+  const apiMessage: AIMessages = { role: msg.role, content: msg.content };
+  if (msg.tool_calls) {
+    apiMessage.tool_calls = msg.tool_calls;
+  }
+  if (msg.tool_call_id !== undefined) {
+    apiMessage.tool_call_id = msg.tool_call_id;
+  }
+  return apiMessage;
+}
+
+function parseUsage(usage: unknown): AIResponse['usage'] {
+  if (!usage || typeof usage !== 'object') {
+    return undefined;
+  }
+  const { prompt_tokens, completion_tokens } = usage as { prompt_tokens?: unknown; completion_tokens?: unknown };
+  if (typeof prompt_tokens !== 'number' || !Number.isFinite(prompt_tokens)) {
+    return undefined;
+  }
+  return {
+    promptTokens: prompt_tokens,
+    completionTokens: typeof completion_tokens === 'number' && Number.isFinite(completion_tokens) ? completion_tokens : 0,
   };
 }
 
@@ -375,7 +430,8 @@ export class AIClient {
     }
 
     // Convert local stored image paths to base64 strings for the API request
-    const processedMessages: AIMessages[] = await Promise.all(messages.map(async (msg): Promise<AIMessages> => {
+    const processedMessages: AIMessages[] = await Promise.all(messages.map(async (sourceMsg): Promise<AIMessages> => {
+      const msg = toApiMessage(sourceMsg);
       if (Array.isArray(msg.content)) {
         const newContent: AiContentItem[] = await Promise.all(msg.content.map(async (item): Promise<AiContentItem> => {
           if (item.type === 'image_url' && item.image_url && (item.image_url.url.startsWith('/workspace/') || item.image_url.url.startsWith('/storage/'))) {
@@ -457,6 +513,22 @@ export class AIClient {
       );
 
       const data = response.data;
+      const usage = parseUsage(data?.usage);
+
+      // OpenRouter can report an upstream provider failure with HTTP 200 and an `error` body
+      if (data?.error && !data.choices?.length) {
+        const apiErrorMessage = String(data.error.message || 'Unknown provider error');
+        const status = typeof data.error.code === 'number' ? data.error.code : undefined;
+        return {
+          content: 'Error: AI response ' + apiErrorMessage,
+          usage,
+          error: {
+            kind: classifyApiError(status, apiErrorMessage, data.error.code),
+            message: apiErrorMessage,
+            status,
+          },
+        };
+      }
 
       const message = data.choices?.[0]?.message;
       let reasoning = message?.reasoning_content || message?.reasoning || undefined;
@@ -475,6 +547,8 @@ export class AIClient {
       if (!content && (!message?.tool_calls || message.tool_calls.length === 0) && !reasoning) {
         return {
           content: 'Error: AI response not received',
+          usage,
+          error: { kind: 'empty_response', message: 'AI response not received' },
         };
       }
 
@@ -482,23 +556,34 @@ export class AIClient {
         content: content,
         toolCalls: message?.tool_calls || undefined,
         reasoning: reasoning,
+        usage,
       };
 
     } catch (error: any) {
       if (axios.isCancel(error) || error.name === 'CanceledError' || error.code === 'ERR_CANCELED' || signal?.aborted) {
         return {
           content: 'Error: Request was cancelled by user',
+          error: { kind: 'cancelled', message: 'Request was cancelled by user' },
         };
       }
       if (axios.isAxiosError(error)) {
         console.error('AIClient: Axios Error ', error.response?.data);
+        const status = error.response?.status;
+        const apiError = (error.response?.data as { error?: { message?: string; code?: unknown } } | undefined)?.error;
+        const apiErrorMessage = apiError?.message || error.message;
         return {
-          content: 'Error: AI response ' + (error.response?.data?.error?.message || error.message),
+          content: 'Error: AI response ' + apiErrorMessage,
+          error: {
+            kind: classifyApiError(status, apiErrorMessage, apiError?.code),
+            message: apiErrorMessage,
+            status,
+          },
         };
       } else {
         console.error('AIClient: Error ', error);
         return {
           content: 'Error: AI response ' + error.message,
+          error: { kind: 'api', message: String(error?.message ?? error) },
         };
       }
     }

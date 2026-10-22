@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS messages (
   FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
 );
 
+-- History is always read per session in insertion order; this index serves both the filter and the ORDER BY
+CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, id);
+
 CREATE TABLE IF NOT EXISTS memories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   session_id TEXT NOT NULL,

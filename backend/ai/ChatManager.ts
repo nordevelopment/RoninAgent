@@ -5,7 +5,7 @@
  * Orchestrates the chat by coordinating the AIClient, ChatHistoryManager, AITools, and MemoryManager
  */
 
-import { AIClient, AIMessages } from './AIClient.js';
+import { AIClient, AIError, AIMessages } from './AIClient.js';
 import { ChatHistoryManager } from './ChatHistoryManager.js';
 import { SessionManager } from './SessionManager.js';
 import { AITools, extractPathArgument } from './AITools.js';
@@ -160,7 +160,7 @@ export class ChatManager {
     imageBase64?: string,
     onProgress?: (event: 'tool_start' | 'tool_done' | 'skills_loaded', data: any) => void | Promise<void>,
     files?: { name: string; path: string; size: number; type?: string }[]
-  ): Promise<{ content: string; reasoning?: string }> {
+  ): Promise<{ content: string; reasoning?: string; error?: AIError }> {
     const controller = new AbortController();
     this.activeAbortControllers.set(sessionId, controller);
     const signal = controller.signal;
@@ -260,6 +260,16 @@ export class ChatManager {
           return { content: 'Generation stopped by user.', reasoning: lastReasoning };
         }
 
+        // A failed request is shown to the user but never stored: a saved "Error: ..." would be
+        // replayed to the model as its own previous answer on every following step
+        if (aiResponse.error) {
+          logger.warn(
+            { sessionId, kind: aiResponse.error.kind, status: aiResponse.error.status, err: aiResponse.error.message },
+            '[ChatManager] AI request failed'
+          );
+          return { content: aiResponse.content, reasoning: lastReasoning, error: aiResponse.error };
+        }
+
         if (aiResponse.reasoning) {
           lastReasoning = aiResponse.reasoning;
         }
@@ -291,6 +301,9 @@ ${chatText}
 Title:`;
 
                 const titleResponse = await this.aiClient.sendMessage([{ role: 'user', content: prompt }], agentId, undefined, undefined, true);
+                if (titleResponse.error) {
+                  return;
+                }
                 let title = titleResponse.content ? titleResponse.content.trim() : '';
 
                 // Strip any thinking tags if present

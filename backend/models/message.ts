@@ -36,11 +36,14 @@ export class Message {
   }
 
   /**
-   * Получить сообщения по session_id
+   * Получить сообщения по session_id в порядке добавления
    */
   async findBySessionId(sessionId: string): Promise<Message[]> {
-    const rows = await this.db.select('messages', { session_id: sessionId });
-    return rows as Message[];
+    const result = await this.db.query(
+      'SELECT * FROM messages WHERE session_id = ? ORDER BY id ASC',
+      [sessionId]
+    );
+    return result.rows as Message[];
   }
 
   /**
