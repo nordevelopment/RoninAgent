@@ -1,6 +1,6 @@
 # Plan: Smart Context Window + Better Step Limit
 
-> **Status:** approved idea, not started. Code does not change until we start a phase.
+> **Status:** Phase 0 committed (`48e375f`), Phase 1 committed. Phases 2–3 not started.
 > **Date:** 2026-10-22
 > **Replaces:** item F2 in [docs/plans/01-harness-fixes.md](docs/plans/01-harness-fixes.md). Item F3 there (per-tool output limits) is still useful and works well together with this plan.
 
@@ -41,6 +41,7 @@ At step 32 the window is messages 3..32. What goes wrong:
 | B6 | Every image in the window is read from disk and sent as base64 on **every** step | ~1k tokens per image, every step |
 | B7 | `SELECT * FROM messages WHERE session_id = ?` has no `ORDER BY` and no index ([DatabaseClient.ts:94](backend/database/DatabaseClient.ts)) | Message order is not guaranteed by SQL |
 | B8 | `usage` from the API response is never read (the field exists in `AIResponse`, but is never filled) | We throw away the exact token count |
+| B9 | A stop between saving `assistant.tool_calls` and running the tools leaves calls without `tool` results ([ChatManager.ts](backend/ai/ChatManager.ts), "stopped before tool execution") | Every next request in this session gets HTTP 400 |
 
 The step limit (`AI_MAX_THINKING_STEPS = 30`) is also small because of B1–B4: long tasks broke anyway.
 
@@ -106,6 +107,7 @@ estimate(newRequest) = actualPromptTokens(lastRequest)
 
 - `rough(x)` = cheap estimate: `chars / 2.5` + `1_200` per image. (2.5 is conservative: Russian text uses more tokens than English.)
 - Most of the number is exact. Only the difference is estimated, so the error stays small.
+- The difference is scaled by the measured ratio `r = actual / rough` of the last request, in the **pessimistic** direction: growth counts as `delta * max(1, r)`, shrinking as `delta * min(1, r)` (`r` clamped to 0.25..4). Reason: rough over-counts English text (r ≈ 0.6); without scaling, eliding 100k rough tokens would look like 100k saved while only ~60k is saved, and the request would still overflow.
 - This also works after eliding: removed text makes the difference negative.
 - No previous request (first request in a session, after restart, after model change): use `rough(newRequest)` only.
 
@@ -119,7 +121,7 @@ If `estimate > budget` -> compress until `estimate <= 0.7 * budget`, in this ord
 
 | Level | What we do | What stays |
 |---|---|---|
-| A | Elide old tool results (oldest first). | Last 3 tool results stay full |
+| A | Elide old tool results (oldest first). When all results of an `assistant.tool_calls` message are elided, long string values (> 1000 chars) in its arguments become `[removed to save context: N chars]` (JSON stays valid, keys stay) — `write_file` content can be as big as a page | Last 3 tool results stay full |
 | B | Old images -> text `[image: /workspace/.../123.jpg]` | Images of the last 2 user turns |
 | C | Drop oldest **whole turns** | Current turn always stays |
 | D | Current turn is still too big: keep only the last 1 tool result full; cut a single huge tool result (head + marker) | User message of the current turn always stays |
@@ -143,6 +145,7 @@ So we keep a small state per session:
 interface ContextState {
   model: string;
   elideToolResultsBeforeId: number; // level A watermark (message id)
+  elideImagesBeforeId: number;      // level B watermark (message id)
   dropTurnsBeforeId: number;        // level C watermark (message id)
   anchor?: { roughTokens: number; actualPromptTokens: number };
 }
@@ -152,6 +155,7 @@ interface ContextState {
 - When they move, they move far (target 70%), so the next 5–15 steps need no change.
 - State lives in memory: `Map<sessionId, ContextState>` in `ChatManager`, max 200 entries (oldest removed first), deleted on session delete / clear history.
 - After a server restart the state is empty -> computed again once (one cache miss, safe).
+- Model changed, or a watermark is past the last message id (history was cleared, ids can be reused) -> the state starts over.
 
 ### 4.6 Overflow retry
 
@@ -185,7 +189,7 @@ Overflow detection: HTTP 400/413 + message matches
 
 | File | Change |
 |---|---|
-| `backend/ai/ContextWindow.ts` | **New.** Pure functions: `splitIntoTurns`, `roughTokens`, `estimateTokens`, `fitContext`. No I/O. Easy to test |
+| `backend/ai/ContextWindow.ts` | **New.** Pure functions: `computeBudget`, `parseContextLimit`, `roughTextTokens`, `roughMessageTokens`, `roughTokens`, `estimateTokens`, `splitIntoTurns`, `repairToolPairs` (fixes B9: orphan results dropped, missing results added as "interrupted"), `fitContext`. No I/O. Easy to test |
 | `backend/ai/AIClient.ts` | Read `usage` (`prompt_tokens`, `completion_tokens`). Return `error: { kind: 'context_overflow' \| 'cancelled' \| 'api', message }` instead of `content: 'Error: ...'`. Call `fitContext` **after** building the system prompt + skills and **before** converting images to base64 (so old images are never read from disk). Accept and return `ContextState` |
 | `backend/ai/ChatManager.ts` | Remove `slice(-AI_MAX_HISTORY_MESSAGES)`. Pass full history + `ContextState`. Overflow retry. Do not save `error` answers in history. Loop detector. Summary at step limit. `Map<sessionId, ContextState>` with cleanup |
 | `backend/ai/ChatHistoryManager.ts` | Return message `id` with each message (needed for watermarks) |
@@ -230,13 +234,16 @@ Each phase is done only when `npm test` and `tsc` are green.
 
 ## 8. Order of work
 
-- [x] **Phase 0 — small safe fixes** (B5, B7, B8) — done 2026-10-22, not committed yet
+- [x] **Phase 0 — small safe fixes** (B5, B7, B8) — done 2026-10-22, commit `48e375f`
   - `ORDER BY id` + index, message `id` in history
   - read `usage`, structured `error` in `AIClient`, do not save errors in history
   - also: `AIClient` sends only API fields (`role`, `content`, `tool_calls`, `tool_call_id`), so the new `id` never reaches the provider
   - also: OpenRouter "HTTP 200 + `error` body" is now an error, not an empty answer
   - also: `TaskService` marks a task as failed when the AI request fails (before: "done" with an error text)
-- [ ] **Phase 1 — `ContextWindow.ts`** (pure logic + full tests, not connected yet)
+- [x] **Phase 1 — `ContextWindow.ts`** (pure logic + full tests, not connected yet) — done 2026-10-23, committed
+  - `tests/contextWindow.test.ts`: 36 tests, all of section 7 plus budget, limit parsing, pair repair, argument shrinking, base64 images
+  - changes vs the first design: image watermark (level B must be stable too), argument shrinking, pair repair (B9), pessimistic anchor scaling, answer reserve capped at half of the context in `computeBudget`
+  - for Phase 2: `fitContext` takes `fixedTokens` = `roughTextTokens(system prompt + skills + JSON of tool schemas)`; after the response set `state.anchor = { roughTokens: result.roughTokens, actualPromptTokens: usage.promptTokens }`
 - [ ] **Phase 2 — connect it** (B1–B4, B6)
   - `AIClient` + `ChatManager` use `fitContext`, `ContextState` map, overflow retry
   - remove `AI_MAX_HISTORY_MESSAGES`, add `AI_CONTEXT_WINDOW`
