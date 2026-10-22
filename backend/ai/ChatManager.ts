@@ -5,13 +5,16 @@
  * Orchestrates the chat by coordinating the AIClient, ChatHistoryManager, AITools, and MemoryManager
  */
 
-import { AIClient, AIError, AIMessages } from './AIClient.js';
+import { AIClient, AIError, AIMessages, AIResponse } from './AIClient.js';
+import type { ContextState } from './ContextWindow.js';
 import { ChatHistoryManager } from './ChatHistoryManager.js';
 import { SessionManager } from './SessionManager.js';
 import { AITools, extractPathArgument } from './AITools.js';
 import { MemoryManager } from './MemoryManager.js';
 import { config } from '../config.js';
 import logger from '../utils/logger.js';
+
+const MAX_CONTEXT_STATES = 200;
 
 export interface ChatManagerDeps {
   aiClient: AIClient;
@@ -28,6 +31,8 @@ export class ChatManager {
   private memoryManager: MemoryManager;
   private sessionManager: SessionManager;
   private activeAbortControllers = new Map<string, AbortController>();
+  /** Context window watermarks per session, kept in least-recently-used order */
+  private contextStates = new Map<string, ContextState>();
 
   constructor(deps: ChatManagerDeps) {
     this.aiClient = deps.aiClient;
@@ -51,6 +56,32 @@ export class ChatManager {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Keeps the watermarks of the last fit. The provider's prompt_tokens for exactly that
+   * request become the anchor of the next estimate. After an overflow the old anchor is
+   * known to be wrong, so the next fit falls back to the rough count.
+   */
+  private rememberContextState(sessionId: string, response: AIResponse): void {
+    if (!response.context) {
+      return;
+    }
+    const state: ContextState = { ...response.context.state };
+    if (response.usage && response.usage.promptTokens > 0) {
+      state.anchor = { roughTokens: response.context.roughTokens, actualPromptTokens: response.usage.promptTokens };
+    } else if (response.error?.kind === 'context_overflow') {
+      delete state.anchor;
+    }
+
+    this.contextStates.delete(sessionId);
+    this.contextStates.set(sessionId, state);
+    if (this.contextStates.size > MAX_CONTEXT_STATES) {
+      const oldest = this.contextStates.keys().next().value;
+      if (oldest !== undefined) {
+        this.contextStates.delete(oldest);
+      }
+    }
   }
 
   /**
@@ -243,17 +274,28 @@ export class ChatManager {
           return { content: 'Generation stopped by user.', reasoning: lastReasoning };
         }
 
-        const fullHistory = await this.historyManager.getHistory(sessionId);
-
-        // Limit history of last messages from config
-        const history = fullHistory.slice(-config.AI_MAX_HISTORY_MESSAGES);
+        // Full history: AIClient fits it into the model context window
+        const history = await this.historyManager.getHistory(sessionId);
 
         // Get agent ID for this session
         const session = await this.sessionManager.getSession(sessionId);
         const agentId = session?.agent_id || config.default_agent;
 
         // Query AI (pass history, agent ID, description of tools, session and memories context, signal)
-        const aiResponse = await this.aiClient.sendMessage(history, agentId, availableTools, combinedSystemContext, false, signal);
+        let aiResponse = await this.aiClient.sendMessage(
+          history, agentId, availableTools, combinedSystemContext, false, signal, undefined,
+          { state: this.contextStates.get(sessionId) }
+        );
+        this.rememberContextState(sessionId, aiResponse);
+
+        if (aiResponse.error?.kind === 'context_overflow' && !signal.aborted) {
+          logger.warn({ sessionId, err: aiResponse.error.message }, '[ChatManager] Context overflow, retrying with aggressive compression');
+          aiResponse = await this.aiClient.sendMessage(
+            history, agentId, availableTools, combinedSystemContext, false, signal, undefined,
+            { state: this.contextStates.get(sessionId), aggressive: true }
+          );
+          this.rememberContextState(sessionId, aiResponse);
+        }
 
         if (signal.aborted) {
           logger.info({ sessionId }, '[ChatManager] Session stopped during AI response');
@@ -434,6 +476,7 @@ Title:`;
    */
   async clearHistory(sessionId: string): Promise<void> {
     await this.historyManager.clearHistory(sessionId);
+    this.contextStates.delete(sessionId);
   }
 
   /**
@@ -460,7 +503,9 @@ Title:`;
    */
   async deleteSession(sessionId: string): Promise<number> {
     // Message history and memories will be deleted automatically due to ON DELETE CASCADE
-    return await this.sessionManager.deleteSession(sessionId);
+    const deleted = await this.sessionManager.deleteSession(sessionId);
+    this.contextStates.delete(sessionId);
+    return deleted;
   }
 
   /**

@@ -20,9 +20,11 @@ export const config = {
   AI_DEFAULT_MODEL: process.env.AI_DEFAULT_MODEL || '',
   AI_EMBEDDING_MODEL: process.env.AI_EMBEDDING_MODEL || 'Qwen/Qwen3-Embedding-8B',
   AI_EMBEDDING_DIM: parseInt(process.env.AI_EMBEDDING_DIM || '4096'),
-  AI_MAX_HISTORY_MESSAGES: process.env.AI_MAX_HISTORY_MESSAGES || 30,
   AI_TEMPERATURE: process.env.AI_TEMPERATURE || 0.2,
-  AI_MAX_TOKENS: process.env.AI_MAX_TOKENS || 32000,
+  // Parsed: a string from .env would be sent to the API as "max_tokens": "16000"
+  AI_MAX_TOKENS: parseInt(process.env.AI_MAX_TOKENS || '32000', 10) || 32000,
+  // Optional manual context length of the model; 0 = detect (overflow errors, OpenRouter /models, default 64k)
+  AI_CONTEXT_WINDOW: parseInt(process.env.AI_CONTEXT_WINDOW || '0', 10) || 0,
   AI_TIMEOUT: 180000,
   AI_MAX_FILE_READ_SIZE: parseInt(process.env.AI_MAX_FILE_READ_SIZE || '1048576'),
   AI_MAX_THINKING_STEPS: parseInt(process.env.AI_MAX_THINKING_STEPS || '30'),

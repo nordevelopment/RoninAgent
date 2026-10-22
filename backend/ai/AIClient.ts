@@ -10,6 +10,16 @@ import fsp from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
 import logger from '../utils/logger.js';
+import { openRouterService } from '../services/OpenRouterService.js';
+import type { StoredMessage } from './ChatHistoryManager.js';
+import {
+  fitContext,
+  computeBudget,
+  parseContextLimit,
+  roughTextTokens,
+  DEFAULT_CONTEXT_LENGTH,
+  type ContextState
+} from './ContextWindow.js';
 
 
 export interface AIToolCall {
@@ -48,6 +58,36 @@ export interface AIResponse {
   };
   /** Set when the request failed; such a response must not be stored as an assistant answer */
   error?: AIError;
+  /** Set when the history was fitted into the context window */
+  context?: ContextWindowReport;
+}
+
+export interface ContextWindowRequest {
+  state?: ContextState;
+  /** Retry after a context overflow: compress harder than usual */
+  aggressive?: boolean;
+}
+
+export interface ContextWindowReport {
+  /** Watermarks after fitting; the anchor is still the one passed in */
+  state: ContextState;
+  roughTokens: number;
+  estimatedTokens: number;
+  budget: number;
+  overBudget: boolean;
+}
+
+function isStoredHistory(messages: AIMessages[]): messages is StoredMessage[] {
+  return messages.every(message => typeof (message as Partial<StoredMessage>).id === 'number');
+}
+
+function isOpenRouterUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return host === 'openrouter.ai' || host.endsWith('.openrouter.ai');
+  } catch {
+    return false;
+  }
 }
 
 const CONTEXT_OVERFLOW_PATTERN = /context length|context_length_exceeded|maximum context|too many tokens|prompt is too long|reduce the length/i;
@@ -113,6 +153,8 @@ interface AiContentItem {
 
 export class AIClient {
   private customReasoning?: AIReasoningParam;
+  /** Real limits named by providers in overflow errors, per model */
+  private learnedContextLengths = new Map<string, number>();
 
   get apiKey(): string {
     return config.AI_API_KEY;
@@ -381,6 +423,27 @@ export class AIClient {
   }
 
   /**
+   * Context length of a model: manual setting, then the limit learned from an overflow
+   * error, then OpenRouter /models (only when talking to OpenRouter), then a safe default.
+   */
+  async resolveContextLength(model: string): Promise<number> {
+    if (config.AI_CONTEXT_WINDOW > 0) {
+      return config.AI_CONTEXT_WINDOW;
+    }
+    const learned = this.learnedContextLengths.get(model);
+    if (learned) {
+      return learned;
+    }
+    if (isOpenRouterUrl(this.apiUrl)) {
+      const fromOpenRouter = await openRouterService.getContextLength(model);
+      if (fromOpenRouter) {
+        return fromOpenRouter;
+      }
+    }
+    return DEFAULT_CONTEXT_LENGTH;
+  }
+
+  /**
    * Send a message to AI
    * @param messages - array of messages (dialog history)
    * @param agentId - ID of the agent (folder name in agents/)
@@ -389,6 +452,7 @@ export class AIClient {
    * @param skipSkills - whether to skip dynamic skills
    * @param signal - AbortSignal for request cancellation
    * @param reasoning - reasoning parameter (defaults to 'medium' from this.reasoning)
+   * @param contextWindow - fit the history into the model context; messages must be stored history (with ids)
    * @returns ответ от AI
    */
   async sendMessage(
@@ -398,12 +462,13 @@ export class AIClient {
     additionalSystem?: string,
     skipSkills?: boolean,
     signal?: AbortSignal,
-    reasoning?: AIReasoningParam
+    reasoning?: AIReasoningParam,
+    contextWindow?: ContextWindowRequest
   ): Promise<AIResponse> {
-
+    const model = this.model;
     const systemPrompt = this.buildSystemPrompt(agentId);
 
-    // Dynamic skills selection based on last user query
+    // Skills are matched on the full history, before fitting, so the current task always counts
     let userQuery = '';
     let activeSkillsContent = '';
 
@@ -429,8 +494,56 @@ export class AIClient {
       }
     }
 
-    // Convert local stored image paths to base64 strings for the API request
-    const processedMessages: AIMessages[] = await Promise.all(messages.map(async (sourceMsg): Promise<AIMessages> => {
+    let finalSystemPrompt = systemPrompt;
+    if (activeSkillsContent) {
+      finalSystemPrompt = finalSystemPrompt ? `${finalSystemPrompt}\n\n[ACTIVE SKILLS]\n${activeSkillsContent}` : activeSkillsContent;
+    }
+    if (additionalSystem) {
+      finalSystemPrompt = finalSystemPrompt ? `${finalSystemPrompt}\n${additionalSystem}` : additionalSystem;
+    }
+
+    let historyToSend: AIMessages[] = messages;
+    let contextReport: ContextWindowReport | undefined;
+    if (contextWindow) {
+      if (isStoredHistory(messages)) {
+        const budget = computeBudget(await this.resolveContextLength(model), config.AI_MAX_TOKENS);
+        const fixedTokens = roughTextTokens(finalSystemPrompt) + (tools?.length ? roughTextTokens(JSON.stringify(tools)) : 0);
+        const fitted = fitContext({
+          messages,
+          fixedTokens,
+          budget,
+          model,
+          state: contextWindow.state,
+          aggressive: contextWindow.aggressive
+        });
+        historyToSend = fitted.messages;
+        contextReport = {
+          state: fitted.state,
+          roughTokens: fitted.roughTokens,
+          estimatedTokens: fitted.estimatedTokens,
+          budget,
+          overBudget: fitted.overBudget
+        };
+        const logContext = {
+          model,
+          budget,
+          estimatedTokens: fitted.estimatedTokens,
+          messages: messages.length,
+          sentMessages: fitted.messages.length,
+          aggressive: !!contextWindow.aggressive
+        };
+        if (fitted.overBudget) {
+          logger.warn(logContext, '[AIClient] Request is over the context budget even after compression');
+        } else {
+          logger.debug(logContext, '[AIClient] Context window fitted');
+        }
+      } else {
+        logger.error('[AIClient] Context window requested for messages without database ids; sending them unfitted');
+      }
+    }
+
+    // Read stored images as base64 only after fitting, so elided old images never touch the disk
+    const processedMessages: AIMessages[] = await Promise.all(historyToSend.map(async (sourceMsg): Promise<AIMessages> => {
       const msg = toApiMessage(sourceMsg);
       if (Array.isArray(msg.content)) {
         const newContent: AiContentItem[] = await Promise.all(msg.content.map(async (item): Promise<AiContentItem> => {
@@ -462,13 +575,6 @@ export class AIClient {
 
     // Add system prompt to the beginning of messages
     const messagesWithSystem: AIMessages[] = [];
-    let finalSystemPrompt = systemPrompt;
-    if (activeSkillsContent) {
-      finalSystemPrompt = finalSystemPrompt ? `${finalSystemPrompt}\n\n[ACTIVE SKILLS]\n${activeSkillsContent}` : activeSkillsContent;
-    }
-    if (additionalSystem) {
-      finalSystemPrompt = finalSystemPrompt ? `${finalSystemPrompt}\n${additionalSystem}` : additionalSystem;
-    }
     if (finalSystemPrompt) {
       messagesWithSystem.push({
         role: 'system',
@@ -480,7 +586,7 @@ export class AIClient {
     // Real code to send a request to the AI API
     // For example, using axios
     const requestBody: Record<string, unknown> = {
-      model: this.model,
+      model,
       messages: messagesWithSystem,
       temperature: config.AI_TEMPERATURE,
       max_tokens: config.AI_MAX_TOKENS,
@@ -497,6 +603,20 @@ export class AIClient {
       requestBody.tool_choice = 'auto';
     }
 
+    const response = await this.requestCompletion(requestBody, signal);
+
+    if (response.error?.kind === 'context_overflow') {
+      const limit = parseContextLimit(response.error.message);
+      if (limit) {
+        this.learnedContextLengths.set(model, limit);
+        logger.warn({ model, limit }, '[AIClient] Learned the model context length from an overflow error');
+      }
+    }
+
+    return contextReport ? { ...response, context: contextReport } : response;
+  }
+
+  private async requestCompletion(requestBody: Record<string, unknown>, signal?: AbortSignal): Promise<AIResponse> {
     try {
       const response = await axios.post(
         this.apiUrl,

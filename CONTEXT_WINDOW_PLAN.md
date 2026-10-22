@@ -1,6 +1,6 @@
 # Plan: Smart Context Window + Better Step Limit
 
-> **Status:** Phase 0 committed (`48e375f`), Phase 1 committed. Phases 2–3 not started.
+> **Status:** Phase 0 committed (`48e375f`), Phase 1 committed, Phase 2 committed. Phase 3 not started.
 > **Date:** 2026-10-22
 > **Replaces:** item F2 in [docs/plans/01-harness-fixes.md](docs/plans/01-harness-fixes.md). Item F3 there (per-tool output limits) is still useful and works well together with this plan.
 
@@ -244,9 +244,14 @@ Each phase is done only when `npm test` and `tsc` are green.
   - `tests/contextWindow.test.ts`: 36 tests, all of section 7 plus budget, limit parsing, pair repair, argument shrinking, base64 images
   - changes vs the first design: image watermark (level B must be stable too), argument shrinking, pair repair (B9), pessimistic anchor scaling, answer reserve capped at half of the context in `computeBudget`
   - for Phase 2: `fitContext` takes `fixedTokens` = `roughTextTokens(system prompt + skills + JSON of tool schemas)`; after the response set `state.anchor = { roughTokens: result.roughTokens, actualPromptTokens: usage.promptTokens }`
-- [ ] **Phase 2 — connect it** (B1–B4, B6)
-  - `AIClient` + `ChatManager` use `fitContext`, `ContextState` map, overflow retry
-  - remove `AI_MAX_HISTORY_MESSAGES`, add `AI_CONTEXT_WINDOW`
+- [x] **Phase 2 — connect it** (B1–B4, B6, B9) — done 2026-10-23, committed
+  - `AIClient.sendMessage(..., contextWindow?: { state, aggressive })` fits stored history after building system prompt + skills, before reading images; returns `context` (state, roughTokens, estimatedTokens, budget, overBudget). Without `contextWindow` (auto-title) nothing changes
+  - `AIClient.resolveContextLength`: `AI_CONTEXT_WINDOW` -> limit learned from an overflow error (per model, in memory) -> OpenRouter `/models` -> 64k
+  - `ChatManager`: full history (no slice), `Map<sessionId, ContextState>` (LRU, 200), anchor from `usage.prompt_tokens`, one aggressive retry on overflow (anchor dropped), state deleted on clear history / delete session
+  - config: `AI_MAX_HISTORY_MESSAGES` removed, `AI_CONTEXT_WINDOW` added, `AI_MAX_TOKENS` now parsed as a number (from `.env` it was sent to the API as a string)
+  - `OpenRouterService`: one shared in-flight request, 60s backoff after a failed fetch (before: every step would wait the 10s timeout while OpenRouter is down), `getContextLength` with `:variant` fallback
+  - tests: retry, anchor, clear-history reset, fit in `AIClient`, no disk read for elided images, context length resolution, OpenRouter backoff/dedupe (106 tests total)
+  - known limit: two parallel requests in one session share the state map (last write wins); this only costs a recompute, it never breaks the request. Real fix is F5 (per-session queue)
 - [ ] **Phase 3 — step limit**
   - default 60, loop detector, summary at limit
 

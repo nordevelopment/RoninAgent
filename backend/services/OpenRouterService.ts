@@ -19,10 +19,15 @@ export interface OpenRouterModelInfo {
   formattedPrice: string;
 }
 
-class OpenRouterService {
+export class OpenRouterService {
   private cachedModels: OpenRouterModelInfo[] = [];
   private lastFetchTime: number = 0;
   private readonly cacheTtlMs: number = 60 * 60 * 1000; // 1 hour
+  // The agent loop asks for context lengths on every step; while OpenRouter is down
+  // each call would otherwise wait for the 10s fetch timeout again
+  private readonly failureBackoffMs: number = 60 * 1000;
+  private lastFailureTime: number = 0;
+  private inFlight: Promise<OpenRouterModelInfo[]> | null = null;
 
   /**
    * Fetch model details from OpenRouter API with caching
@@ -32,7 +37,30 @@ class OpenRouterService {
     if (this.cachedModels.length > 0 && (now - this.lastFetchTime) < this.cacheTtlMs) {
       return this.cachedModels;
     }
+    if ((now - this.lastFailureTime) < this.failureBackoffMs) {
+      return this.cachedModels;
+    }
+    if (!this.inFlight) {
+      this.inFlight = this.fetchModels().finally(() => {
+        this.inFlight = null;
+      });
+    }
+    return this.inFlight;
+  }
 
+  /**
+   * Context length of a model, or undefined when OpenRouter does not list it.
+   * Routing variants like ":nitro" are not listed separately, so the base id is tried too.
+   */
+  async getContextLength(modelId: string): Promise<number | undefined> {
+    const models = await this.getModels();
+    const baseId = modelId.split(':')[0];
+    const info = models.find(m => m.id === modelId) ?? models.find(m => m.id === baseId);
+    return info && info.context_length > 0 ? info.context_length : undefined;
+  }
+
+  private async fetchModels(): Promise<OpenRouterModelInfo[]> {
+    const now = Date.now();
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -93,7 +121,9 @@ class OpenRouterService {
         this.lastFetchTime = now;
         return this.cachedModels;
       }
+      throw new Error('OpenRouter API returned an empty model list');
     } catch (err) {
+      this.lastFailureTime = Date.now();
       console.warn('[OpenRouterService] Failed to fetch live models from OpenRouter:', err instanceof Error ? err.message : String(err));
     }
 

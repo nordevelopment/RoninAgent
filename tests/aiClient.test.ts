@@ -5,6 +5,8 @@ import fsp from 'fs/promises';
 import path from 'path';
 import { AIClient, AIMessages } from '../backend/ai/AIClient.js';
 import { config } from '../backend/config.js';
+import { openRouterService } from '../backend/services/OpenRouterService.js';
+import type { StoredMessage } from '../backend/ai/ChatHistoryManager.js';
 
 vi.mock('axios');
 
@@ -19,6 +21,7 @@ describe('AIClient Tests', () => {
     config.AI_TEMPERATURE = 0.2;
     config.AI_MAX_TOKENS = 4000;
     config.AI_TIMEOUT = 10000;
+    config.AI_CONTEXT_WINDOW = 0;
 
     aiClient = new AIClient();
   });
@@ -441,6 +444,115 @@ describe('AIClient Tests', () => {
 
       expect(imgItem.image_url.url).toContain('data:image/jpeg;base64,');
       expect(imgItem.image_url.url).toBe(`data:image/jpeg;base64,${mockBuffer.toString('base64')}`);
+    });
+  });
+
+  describe('Context window', () => {
+    const NO_AGENT = 'non_existent_agent_xyz_123';
+    const okResponse = { data: { choices: [{ message: { role: 'assistant', content: 'ok' } }], usage: { prompt_tokens: 1000, completion_tokens: 5 } } };
+
+    function longToolHistory(steps: number, resultChars: number): StoredMessage[] {
+      const messages: StoredMessage[] = [{ id: 1, role: 'user', content: 'Find laptops and make an Excel table' }];
+      for (let i = 0; i < steps; i++) {
+        const callId = `call_${i}`;
+        messages.push({
+          id: messages.length + 1,
+          role: 'assistant',
+          content: '',
+          tool_calls: [{ id: callId, type: 'function', function: { name: 'fetch_web_page', arguments: JSON.stringify({ url: `https://example.com/${i}` }) } }]
+        });
+        messages.push({ id: messages.length + 1, role: 'tool', tool_call_id: callId, content: 'x'.repeat(resultChars) });
+      }
+      return messages;
+    }
+
+    it('fits stored history into the configured context window and reports the fit', async () => {
+      config.AI_CONTEXT_WINDOW = 20_000;
+      (axios.post as any).mockResolvedValueOnce(okResponse);
+
+      const response = await aiClient.sendMessage(longToolHistory(20, 5_000), NO_AGENT, undefined, undefined, true, undefined, undefined, {});
+
+      expect(response.context?.budget).toBe(20_000 - 4_000 - 1_000);
+      expect(response.context?.estimatedTokens).toBeLessThanOrEqual(response.context!.budget);
+      expect(response.context?.state.elideToolResultsBeforeId).toBeGreaterThan(0);
+      expect(response.usage?.promptTokens).toBe(1000);
+
+      const [, body] = (axios.post as any).mock.calls[0];
+      expect(body.messages[0]).toEqual({ role: 'user', content: 'Find laptops and make an Excel table' });
+      expect(body.messages.some((m: any) => typeof m.content === 'string' && m.content.startsWith('[Tool result removed to save context'))).toBe(true);
+      expect(body.messages.every((m: any) => !('id' in m))).toBe(true);
+    });
+
+    it('never reads elided old images from disk', async () => {
+      config.AI_CONTEXT_WINDOW = 5_000;
+      config.AI_MAX_TOKENS = 1_000;
+      const readSpy = vi.spyOn(fsp, 'readFile').mockResolvedValue(Buffer.from('img') as any);
+      (axios.post as any).mockResolvedValueOnce(okResponse);
+
+      const history: StoredMessage[] = [];
+      for (let i = 1; i <= 4; i++) {
+        history.push({
+          id: history.length + 1,
+          role: 'user',
+          content: [
+            { type: 'text', text: 'look' },
+            { type: 'image_url', image_url: { url: `/workspace/s/images/${i}.jpg` } }
+          ]
+        });
+        history.push({ id: history.length + 1, role: 'assistant', content: 'ok' });
+      }
+      history.pop();
+
+      await aiClient.sendMessage(history, NO_AGENT, undefined, undefined, true, undefined, undefined, {});
+
+      const readPaths = readSpy.mock.calls.map(call => String(call[0]));
+      expect(readPaths.some(p => p.endsWith('1.jpg'))).toBe(false);
+      expect(readPaths.some(p => p.endsWith('2.jpg'))).toBe(false);
+      expect(readPaths.some(p => p.endsWith('4.jpg'))).toBe(true);
+      readSpy.mockRestore();
+    });
+
+    it('sends messages without database ids unfitted', async () => {
+      config.AI_CONTEXT_WINDOW = 20_000;
+      (axios.post as any).mockResolvedValueOnce(okResponse);
+
+      const response = await aiClient.sendMessage([{ role: 'user', content: 'Hello' }], NO_AGENT, undefined, undefined, true, undefined, undefined, {});
+      expect(response.context).toBeUndefined();
+      expect(response.content).toBe('ok');
+    });
+
+    it('learns the real context length from an overflow error', async () => {
+      config.AI_API_URL = 'https://api.example.com/v1/chat/completions';
+      vi.spyOn(axios, 'isAxiosError').mockReturnValue(true);
+      (axios.post as any).mockRejectedValueOnce({
+        isAxiosError: true,
+        message: 'Request failed with status code 400',
+        response: { status: 400, data: { error: { message: "This model's maximum context length is 32768 tokens." } } }
+      });
+
+      expect(await aiClient.resolveContextLength(config.AI_DEFAULT_MODEL)).toBe(64_000);
+      const response = await aiClient.sendMessage(longToolHistory(2, 100), NO_AGENT, undefined, undefined, true, undefined, undefined, {});
+      expect(response.error?.kind).toBe('context_overflow');
+      expect(response.context).toBeDefined();
+      expect(await aiClient.resolveContextLength(config.AI_DEFAULT_MODEL)).toBe(32_768);
+    });
+
+    it('resolves the context length: manual setting, then OpenRouter, then the default', async () => {
+      const openRouterSpy = vi.spyOn(openRouterService, 'getContextLength').mockResolvedValue(200_000);
+
+      expect(await aiClient.resolveContextLength('vendor/model')).toBe(200_000);
+      expect(openRouterSpy).toHaveBeenCalledWith('vendor/model');
+
+      config.AI_CONTEXT_WINDOW = 50_000;
+      expect(await aiClient.resolveContextLength('vendor/model')).toBe(50_000);
+
+      config.AI_CONTEXT_WINDOW = 0;
+      config.AI_API_URL = 'https://api.example.com/v1/chat/completions';
+      openRouterSpy.mockClear();
+      expect(await aiClient.resolveContextLength('vendor/model')).toBe(64_000);
+      expect(openRouterSpy).not.toHaveBeenCalled();
+
+      openRouterSpy.mockRestore();
     });
   });
 });
