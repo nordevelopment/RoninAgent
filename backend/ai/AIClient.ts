@@ -68,6 +68,16 @@ export interface ContextWindowRequest {
   aggressive?: boolean;
 }
 
+export interface SendMessageOptions {
+  /** Fit the history into the model context; messages must be stored history (with ids) */
+  contextWindow?: ContextWindowRequest;
+  /**
+   * 'none' forbids tool calls but still sends the tool schemas: some providers (Anthropic)
+   * reject a history with tool calls when the request defines no tools
+   */
+  toolChoice?: 'auto' | 'none';
+}
+
 export interface ContextWindowReport {
   /** Watermarks after fitting; the anchor is still the one passed in */
   state: ContextState;
@@ -452,7 +462,7 @@ export class AIClient {
    * @param skipSkills - whether to skip dynamic skills
    * @param signal - AbortSignal for request cancellation
    * @param reasoning - reasoning parameter (defaults to 'medium' from this.reasoning)
-   * @param contextWindow - fit the history into the model context; messages must be stored history (with ids)
+   * @param options - context window fitting and tool choice
    * @returns ответ от AI
    */
   async sendMessage(
@@ -463,8 +473,9 @@ export class AIClient {
     skipSkills?: boolean,
     signal?: AbortSignal,
     reasoning?: AIReasoningParam,
-    contextWindow?: ContextWindowRequest
+    options: SendMessageOptions = {}
   ): Promise<AIResponse> {
+    const { contextWindow, toolChoice = 'auto' } = options;
     const model = this.model;
     const systemPrompt = this.buildSystemPrompt(agentId);
 
@@ -600,7 +611,7 @@ export class AIClient {
     // If tools are passed, add them to the request
     if (tools && tools.length > 0) {
       requestBody.tools = tools;
-      requestBody.tool_choice = 'auto';
+      requestBody.tool_choice = toolChoice;
     }
 
     const response = await this.requestCompletion(requestBody, signal);

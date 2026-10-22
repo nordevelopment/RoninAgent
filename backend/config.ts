@@ -27,7 +27,7 @@ export const config = {
   AI_CONTEXT_WINDOW: parseInt(process.env.AI_CONTEXT_WINDOW || '0', 10) || 0,
   AI_TIMEOUT: 180000,
   AI_MAX_FILE_READ_SIZE: parseInt(process.env.AI_MAX_FILE_READ_SIZE || '1048576'),
-  AI_MAX_THINKING_STEPS: parseInt(process.env.AI_MAX_THINKING_STEPS || '30'),
+  AI_MAX_THINKING_STEPS: parseInt(process.env.AI_MAX_THINKING_STEPS || '60', 10) || 60,
   AI_REASONING_EFFORT: process.env.AI_REASONING_EFFORT || 'medium',
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
   ALLOWED_TELEGRAM_USER_IDS: process.env.ALLOWED_TELEGRAM_USER_IDS || '',
@@ -95,8 +95,9 @@ if (fs.existsSync(configJsonPath)) {
       if (parsed.ai_max_file_read_size) {
         config.AI_MAX_FILE_READ_SIZE = parseInt(parsed.ai_max_file_read_size, 10);
       }
-      if (parsed.ai_max_thinking_steps) {
-        config.AI_MAX_THINKING_STEPS = parseInt(parsed.ai_max_thinking_steps, 10);
+      const maxThinkingSteps = parseInt(parsed.ai_max_thinking_steps, 10);
+      if (maxThinkingSteps > 0) {
+        config.AI_MAX_THINKING_STEPS = maxThinkingSteps;
       }
       if (parsed.ai_reasoning_effort && parsed.ai_reasoning_effort.trim()) {
         config.AI_REASONING_EFFORT = parsed.ai_reasoning_effort.trim();

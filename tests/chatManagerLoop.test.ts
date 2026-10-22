@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { ChatManager } from '../backend/ai/ChatManager.js';
 import { AIClient, type AIMessages, type ContextWindowReport, type ContextWindowRequest } from '../backend/ai/AIClient.js';
 import { ChatHistoryManager } from '../backend/ai/ChatHistoryManager.js';
@@ -10,6 +10,7 @@ import { FileSystemManager } from '../backend/services/FileSystemManager.js';
 import { WebPageContent } from '../backend/services/WebPageContent.js';
 import { OfficeDocumentService } from '../backend/services/OfficeDocumentService.js';
 import path from 'path';
+import { config } from '../backend/config.js';
 
 describe('ChatManager Multi-Step Tool Execution Loop', () => {
   it('successfully completes a multi-step loop: tool call -> tool result -> final answer', async () => {
@@ -272,9 +273,9 @@ describe('ChatManager context window', () => {
     }
 
     const calls: { messages: AIMessages[]; contextWindow?: ContextWindowRequest }[] = [];
-    vi.spyOn(aiClient, 'sendMessage').mockImplementation(async (messages, _a, _t, _s, _k, _sig, _r, contextWindow) => {
+    vi.spyOn(aiClient, 'sendMessage').mockImplementation(async (messages, _a, _t, _s, _k, _sig, _r, options) => {
       if (isTitleRequest(messages)) return { content: 'Unused' };
-      calls.push({ messages, contextWindow });
+      calls.push({ messages, contextWindow: options?.contextWindow });
       return { content: 'done' };
     });
 
@@ -289,9 +290,9 @@ describe('ChatManager context window', () => {
     const { aiClient, historyManager, chatManager, sessionId } = await setup('test_overflow_retry');
 
     const requests: (ContextWindowRequest | undefined)[] = [];
-    vi.spyOn(aiClient, 'sendMessage').mockImplementation(async (messages, _a, _t, _s, _k, _sig, _r, contextWindow) => {
+    vi.spyOn(aiClient, 'sendMessage').mockImplementation(async (messages, _a, _t, _s, _k, _sig, _r, options) => {
       if (isTitleRequest(messages)) return { content: 'Unused' };
-      requests.push(contextWindow);
+      requests.push(options?.contextWindow);
       if (requests.length === 1) {
         return {
           content: 'Error: AI response prompt is too long',
@@ -318,9 +319,9 @@ describe('ChatManager context window', () => {
     const { aiClient, chatManager, sessionId } = await setup('test_anchor');
 
     const requests: (ContextWindowRequest | undefined)[] = [];
-    vi.spyOn(aiClient, 'sendMessage').mockImplementation(async (messages, _a, _t, _s, _k, _sig, _r, contextWindow) => {
+    vi.spyOn(aiClient, 'sendMessage').mockImplementation(async (messages, _a, _t, _s, _k, _sig, _r, options) => {
       if (isTitleRequest(messages)) return { content: 'Unused' };
-      requests.push(contextWindow);
+      requests.push(options?.contextWindow);
       return { content: 'ok', usage: { promptTokens: 4_321, completionTokens: 5 }, context: context(5) };
     });
 
@@ -334,6 +335,131 @@ describe('ChatManager context window', () => {
     await chatManager.clearHistory(sessionId);
     await chatManager.sendMessage('after clear', sessionId);
     expect(requests[2]?.state).toBeUndefined();
+  });
+});
+
+describe('ChatManager step limit and loop detector', () => {
+  async function setup(prefix: string) {
+    const db = new DatabaseClient(':memory:');
+    await db.initialize();
+    const aiClient = new AIClient();
+    const historyManager = new ChatHistoryManager(db);
+    const sessionManager = new SessionManager(db);
+    const memoryManager = new MemoryManager(db);
+    const fsManager = new FileSystemManager([path.resolve(process.cwd(), 'workspace')]);
+    const tools = new AITools(fsManager, new WebPageContent(), new OfficeDocumentService(), memoryManager);
+    const sessionId = `${prefix}_${Date.now()}`;
+    await sessionManager.createSession(sessionId);
+    const chatManager = new ChatManager({ aiClient, historyManager, tools, memoryManager, sessionManager });
+    return { aiClient, historyManager, tools, chatManager, sessionId };
+  }
+
+  const isTitleRequest = (messages: AIMessages[]) =>
+    typeof messages[0]?.content === 'string' && messages[0].content.includes('generate a short, descriptive title');
+
+  const readFileCall = (id: string, args: Record<string, unknown>) => ({
+    id,
+    type: 'function' as const,
+    function: { name: 'read_file', arguments: JSON.stringify(args) }
+  });
+
+  const originalMaxSteps = config.AI_MAX_THINKING_STEPS;
+  afterEach(() => {
+    config.AI_MAX_THINKING_STEPS = originalMaxSteps;
+  });
+
+  it('blocks a call that already returned the same result twice', async () => {
+    const { aiClient, historyManager, tools, chatManager, sessionId } = await setup('test_loop_block');
+    const executeSpy = vi.spyOn(tools, 'executeTool').mockResolvedValue({ name: 'read_file', result: { content: 'same' } });
+
+    let step = 0;
+    vi.spyOn(aiClient, 'sendMessage').mockImplementation(async (messages) => {
+      if (isTitleRequest(messages)) return { content: 'Unused' };
+      step++;
+      if (step <= 4) {
+        // Same arguments with a different key order still count as the same call
+        const args = step % 2 === 0 ? { path: 'a.txt', encoding: 'utf8' } : { encoding: 'utf8', path: 'a.txt' };
+        return { content: '', toolCalls: [readFileCall(`call_${step}`, args)] };
+      }
+      return { content: 'Done' };
+    });
+
+    const response = await chatManager.sendMessage('read a.txt', sessionId);
+    expect(response.content).toBe('Done');
+    expect(executeSpy).toHaveBeenCalledTimes(2);
+
+    const toolResults = (await historyManager.getHistory(sessionId)).filter(m => m.role === 'tool');
+    expect(toolResults).toHaveLength(4);
+    expect(toolResults[2].content).toContain('You already called read_file with the same arguments 2 times');
+    expect(toolResults[3].content).toContain('You already called read_file');
+  });
+
+  it('does not block a repeated call whose result changes', async () => {
+    const { aiClient, tools, chatManager, sessionId } = await setup('test_loop_changing');
+    let version = 0;
+    const executeSpy = vi.spyOn(tools, 'executeTool').mockImplementation(async () => ({ name: 'read_file', result: { content: `v${++version}` } }));
+
+    let step = 0;
+    vi.spyOn(aiClient, 'sendMessage').mockImplementation(async (messages) => {
+      if (isTitleRequest(messages)) return { content: 'Unused' };
+      step++;
+      if (step <= 4) {
+        return { content: '', toolCalls: [readFileCall(`call_${step}`, { path: 'a.txt' })] };
+      }
+      return { content: 'Done' };
+    });
+
+    await chatManager.sendMessage('watch a.txt', sessionId);
+    expect(executeSpy).toHaveBeenCalledTimes(4);
+  });
+
+  it('asks for a summary without tool calls at the step limit and stores it', async () => {
+    config.AI_MAX_THINKING_STEPS = 3;
+    const { aiClient, historyManager, tools, chatManager, sessionId } = await setup('test_step_limit');
+    vi.spyOn(tools, 'executeTool').mockImplementation(async (toolCall) => ({ name: toolCall.name, result: { content: String(toolCall.arguments.path) } }));
+
+    const requests: { system?: string; toolChoice?: string; tools?: unknown[] }[] = [];
+    vi.spyOn(aiClient, 'sendMessage').mockImplementation(async (messages, _a, tools, system, _k, _sig, _r, options) => {
+      if (isTitleRequest(messages)) return { content: 'Unused' };
+      requests.push({ system, toolChoice: options?.toolChoice, tools });
+      if (options?.toolChoice === 'none') {
+        // A provider that ignores tool_choice must not leave unanswered tool calls in history
+        return { content: 'Read 3 of 5 files. Left: d.txt, e.txt. Say "continue".', toolCalls: [readFileCall('ignored', { path: 'x' })] };
+      }
+      return { content: '', toolCalls: [readFileCall(`call_${requests.length}`, { path: `${requests.length}.txt` })] };
+    });
+
+    const response = await chatManager.sendMessage('read five files', sessionId);
+    expect(response.content).toBe('Read 3 of 5 files. Left: d.txt, e.txt. Say "continue".');
+    expect(requests).toHaveLength(4);
+    expect(requests.slice(0, 3).every(r => r.toolChoice === 'auto')).toBe(true);
+    expect(requests[3].toolChoice).toBe('none');
+    expect(requests[3].tools?.length).toBeGreaterThan(0);
+    expect(requests[3].system).toContain('Step limit reached. Do not call tools.');
+
+    const history = await historyManager.getHistory(sessionId);
+    const last = history[history.length - 1];
+    expect(last).toMatchObject({ role: 'assistant', content: response.content });
+    expect(last.tool_calls).toBeUndefined();
+  });
+
+  it('does not store a failed step limit summary', async () => {
+    config.AI_MAX_THINKING_STEPS = 1;
+    const { aiClient, historyManager, tools, chatManager, sessionId } = await setup('test_step_limit_error');
+    vi.spyOn(tools, 'executeTool').mockResolvedValue({ name: 'read_file', result: { content: 'x' } });
+
+    vi.spyOn(aiClient, 'sendMessage').mockImplementation(async (messages, _a, _t, _s, _k, _sig, _r, options) => {
+      if (isTitleRequest(messages)) return { content: 'Unused' };
+      if (options?.toolChoice === 'none') {
+        return { content: 'Error: AI response Upstream down', error: { kind: 'api', message: 'Upstream down', status: 502 } };
+      }
+      return { content: '', toolCalls: [readFileCall('call_1', { path: 'a.txt' })] };
+    });
+
+    const response = await chatManager.sendMessage('task', sessionId);
+    expect(response.error?.kind).toBe('api');
+    const history = await historyManager.getHistory(sessionId);
+    expect(history.map(m => m.role)).toEqual(['user', 'assistant', 'tool']);
   });
 });
 

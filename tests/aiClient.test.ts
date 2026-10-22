@@ -470,7 +470,7 @@ describe('AIClient Tests', () => {
       config.AI_CONTEXT_WINDOW = 20_000;
       (axios.post as any).mockResolvedValueOnce(okResponse);
 
-      const response = await aiClient.sendMessage(longToolHistory(20, 5_000), NO_AGENT, undefined, undefined, true, undefined, undefined, {});
+      const response = await aiClient.sendMessage(longToolHistory(20, 5_000), NO_AGENT, undefined, undefined, true, undefined, undefined, { contextWindow: {} });
 
       expect(response.context?.budget).toBe(20_000 - 4_000 - 1_000);
       expect(response.context?.estimatedTokens).toBeLessThanOrEqual(response.context!.budget);
@@ -503,7 +503,7 @@ describe('AIClient Tests', () => {
       }
       history.pop();
 
-      await aiClient.sendMessage(history, NO_AGENT, undefined, undefined, true, undefined, undefined, {});
+      await aiClient.sendMessage(history, NO_AGENT, undefined, undefined, true, undefined, undefined, { contextWindow: {} });
 
       const readPaths = readSpy.mock.calls.map(call => String(call[0]));
       expect(readPaths.some(p => p.endsWith('1.jpg'))).toBe(false);
@@ -512,11 +512,22 @@ describe('AIClient Tests', () => {
       readSpy.mockRestore();
     });
 
+    it('sends tool schemas with tool_choice none when tool calls are forbidden', async () => {
+      (axios.post as any).mockResolvedValueOnce(okResponse);
+      const tools = [{ type: 'function', function: { name: 'read_file', parameters: { type: 'object', properties: {} } } }];
+
+      await aiClient.sendMessage([{ role: 'user', content: 'Summarize' }], NO_AGENT, tools, undefined, true, undefined, undefined, { toolChoice: 'none' });
+
+      const [, body] = (axios.post as any).mock.calls[0];
+      expect(body.tools).toEqual(tools);
+      expect(body.tool_choice).toBe('none');
+    });
+
     it('sends messages without database ids unfitted', async () => {
       config.AI_CONTEXT_WINDOW = 20_000;
       (axios.post as any).mockResolvedValueOnce(okResponse);
 
-      const response = await aiClient.sendMessage([{ role: 'user', content: 'Hello' }], NO_AGENT, undefined, undefined, true, undefined, undefined, {});
+      const response = await aiClient.sendMessage([{ role: 'user', content: 'Hello' }], NO_AGENT, undefined, undefined, true, undefined, undefined, { contextWindow: {} });
       expect(response.context).toBeUndefined();
       expect(response.content).toBe('ok');
     });
@@ -531,7 +542,7 @@ describe('AIClient Tests', () => {
       });
 
       expect(await aiClient.resolveContextLength(config.AI_DEFAULT_MODEL)).toBe(64_000);
-      const response = await aiClient.sendMessage(longToolHistory(2, 100), NO_AGENT, undefined, undefined, true, undefined, undefined, {});
+      const response = await aiClient.sendMessage(longToolHistory(2, 100), NO_AGENT, undefined, undefined, true, undefined, undefined, { contextWindow: {} });
       expect(response.error?.kind).toBe('context_overflow');
       expect(response.context).toBeDefined();
       expect(await aiClient.resolveContextLength(config.AI_DEFAULT_MODEL)).toBe(32_768);

@@ -5,8 +5,10 @@
  * Orchestrates the chat by coordinating the AIClient, ChatHistoryManager, AITools, and MemoryManager
  */
 
+import { createHash } from 'crypto';
 import { AIClient, AIError, AIMessages, AIResponse } from './AIClient.js';
 import type { ContextState } from './ContextWindow.js';
+import type { StoredMessage } from './ChatHistoryManager.js';
 import { ChatHistoryManager } from './ChatHistoryManager.js';
 import { SessionManager } from './SessionManager.js';
 import { AITools, extractPathArgument } from './AITools.js';
@@ -15,6 +17,43 @@ import { config } from '../config.js';
 import logger from '../utils/logger.js';
 
 const MAX_CONTEXT_STATES = 200;
+/** A call is blocked once it has returned the same result this many times in a row */
+const LOOP_REPEAT_LIMIT = 2;
+const STEP_LIMIT_NOTE = '[STEP LIMIT REACHED]\nStep limit reached. Do not call tools. Briefly tell the user what is done, ' +
+  'what is left, and that they can say "continue" to resume.';
+
+interface ToolCallRepeat {
+  /** Hash of the last result: results can be 100k chars and live for the whole turn */
+  lastResultHash: string;
+  sameResultRuns: number;
+}
+
+/** JSON with object keys sorted, so {a,b} and {b,a} count as the same arguments */
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(',')}]`;
+  }
+  if (value && typeof value === 'object') {
+    const entries = Object.keys(value as Record<string, unknown>)
+      .sort()
+      .map(key => `${JSON.stringify(key)}:${stableStringify((value as Record<string, unknown>)[key])}`);
+    return `{${entries.join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+}
+
+/**
+ * Only an identical result counts as a repeat: re-reading a file after editing it is
+ * legitimate work, while getting the same answer again is the loop we want to stop.
+ */
+function recordToolCallResult(repeats: Map<string, ToolCallRepeat>, key: string, resultContent: string): void {
+  const resultHash = createHash('sha1').update(resultContent).digest('hex');
+  const previous = repeats.get(key);
+  repeats.set(key, {
+    lastResultHash: resultHash,
+    sameResultRuns: previous && previous.lastResultHash === resultHash ? previous.sameResultRuns + 1 : 1
+  });
+}
 
 export interface ChatManagerDeps {
   aiClient: AIClient;
@@ -82,6 +121,35 @@ export class ChatManager {
         this.contextStates.delete(oldest);
       }
     }
+  }
+
+  /**
+   * One model request over the fitted history, with a single aggressive retry on context overflow
+   */
+  private async requestStep(
+    sessionId: string,
+    history: StoredMessage[],
+    agentId: string,
+    tools: any[],
+    systemContext: string,
+    signal: AbortSignal,
+    toolChoice: 'auto' | 'none'
+  ): Promise<AIResponse> {
+    let response = await this.aiClient.sendMessage(history, agentId, tools, systemContext, false, signal, undefined, {
+      contextWindow: { state: this.contextStates.get(sessionId) },
+      toolChoice
+    });
+    this.rememberContextState(sessionId, response);
+
+    if (response.error?.kind === 'context_overflow' && !signal.aborted) {
+      logger.warn({ sessionId, err: response.error.message }, '[ChatManager] Context overflow, retrying with aggressive compression');
+      response = await this.aiClient.sendMessage(history, agentId, tools, systemContext, false, signal, undefined, {
+        contextWindow: { state: this.contextStates.get(sessionId), aggressive: true },
+        toolChoice
+      });
+      this.rememberContextState(sessionId, response);
+    }
+    return response;
   }
 
   /**
@@ -267,7 +335,8 @@ export class ChatManager {
       const combinedSystemContext = [sessionContext, memoriesContext].filter(Boolean).join('\n\n');
 
       // Run loop of interaction with AI (maximum iterations from config, to not go into infinite loop)
-      const maxSteps = config.AI_MAX_THINKING_STEPS || 25;
+      const maxSteps = config.AI_MAX_THINKING_STEPS;
+      const toolCallRepeats = new Map<string, ToolCallRepeat>();
       for (let i = 0; i < maxSteps; i++) {
         if (signal.aborted) {
           logger.info({ sessionId }, '[ChatManager] Session stopped before AI thinking step');
@@ -281,21 +350,7 @@ export class ChatManager {
         const session = await this.sessionManager.getSession(sessionId);
         const agentId = session?.agent_id || config.default_agent;
 
-        // Query AI (pass history, agent ID, description of tools, session and memories context, signal)
-        let aiResponse = await this.aiClient.sendMessage(
-          history, agentId, availableTools, combinedSystemContext, false, signal, undefined,
-          { state: this.contextStates.get(sessionId) }
-        );
-        this.rememberContextState(sessionId, aiResponse);
-
-        if (aiResponse.error?.kind === 'context_overflow' && !signal.aborted) {
-          logger.warn({ sessionId, err: aiResponse.error.message }, '[ChatManager] Context overflow, retrying with aggressive compression');
-          aiResponse = await this.aiClient.sendMessage(
-            history, agentId, availableTools, combinedSystemContext, false, signal, undefined,
-            { state: this.contextStates.get(sessionId), aggressive: true }
-          );
-          this.rememberContextState(sessionId, aiResponse);
-        }
+        const aiResponse = await this.requestStep(sessionId, history, agentId, availableTools, combinedSystemContext, signal, 'auto');
 
         if (signal.aborted) {
           logger.info({ sessionId }, '[ChatManager] Session stopped during AI response');
@@ -394,8 +449,24 @@ Title:`;
             return { content: 'Generation stopped by user.', reasoning: lastReasoning };
           }
 
+          let toolCallKey: string | undefined;
           try {
             const toolArgs = this.safeParseToolArguments(toolCall.function.arguments, toolCall.function.name);
+
+            toolCallKey = `${toolCall.function.name}:${stableStringify(toolArgs)}`;
+            const previous = toolCallRepeats.get(toolCallKey);
+            if (previous && previous.sameResultRuns >= LOOP_REPEAT_LIMIT) {
+              logger.warn({ sessionId, tool: toolCall.function.name }, '[ChatManager] Repeated tool call blocked by the loop detector');
+              await this.historyManager.addMessage(sessionId, {
+                role: 'tool',
+                content: JSON.stringify({
+                  error: `You already called ${toolCall.function.name} with the same arguments ${previous.sameResultRuns} times in this task and got the same result. ` +
+                    'The result will not change. Use the previous result or try a different approach.'
+                }),
+                tool_call_id: toolCall.id
+              });
+              continue;
+            }
 
             if (onProgress) {
               await onProgress('tool_start', {
@@ -417,9 +488,11 @@ Title:`;
             }
 
             // Save result of tool execution in history
+            const resultContent = JSON.stringify(result.result);
+            recordToolCallResult(toolCallRepeats, toolCallKey, resultContent);
             await this.historyManager.addMessage(sessionId, {
               role: 'tool',
-              content: JSON.stringify(result.result),
+              content: resultContent,
               tool_call_id: toolCall.id
             });
           } catch (error) {
@@ -433,9 +506,13 @@ Title:`;
             }
 
             // save error in history for AI to know
+            const errorContent = JSON.stringify({ error: (error as Error).message });
+            if (toolCallKey) {
+              recordToolCallResult(toolCallRepeats, toolCallKey, errorContent);
+            }
             await this.historyManager.addMessage(sessionId, {
               role: 'tool',
-              content: JSON.stringify({ error: (error as Error).message }),
+              content: errorContent,
               tool_call_id: toolCall.id
             });
           }
@@ -443,7 +520,33 @@ Title:`;
 
       }
 
-      return { content: "The thinking iteration limit has been exceeded, Try again later." };
+      if (signal.aborted) {
+        return { content: 'Generation stopped by user.', reasoning: lastReasoning };
+      }
+
+      // Out of steps: one more request with tools forbidden, so the work done so far is
+      // summarized and kept in history instead of being lost
+      logger.warn({ sessionId, maxSteps }, '[ChatManager] Step limit reached, asking the model for a summary');
+      const session = await this.sessionManager.getSession(sessionId);
+      const agentId = session?.agent_id || config.default_agent;
+      const history = await this.historyManager.getHistory(sessionId);
+      const summaryResponse = await this.requestStep(
+        sessionId, history, agentId, availableTools, `${combinedSystemContext}\n\n${STEP_LIMIT_NOTE}`, signal, 'none'
+      );
+
+      if (signal.aborted) {
+        return { content: 'Generation stopped by user.', reasoning: lastReasoning };
+      }
+      if (summaryResponse.error) {
+        logger.warn({ sessionId, kind: summaryResponse.error.kind, err: summaryResponse.error.message }, '[ChatManager] Step limit summary failed');
+        return { content: summaryResponse.content, reasoning: lastReasoning, error: summaryResponse.error };
+      }
+
+      // Tool calls are dropped even if the provider ignored tool_choice: they would have no results
+      const summary = summaryResponse.content.trim()
+        || `I reached the step limit (${maxSteps} steps) before finishing the task. Say "continue" and I will go on.`;
+      await this.historyManager.addMessage(sessionId, { role: 'assistant', content: summary });
+      return { content: summary, reasoning: summaryResponse.reasoning ?? lastReasoning };
     } finally {
       if (this.activeAbortControllers.get(sessionId) === controller) {
         this.activeAbortControllers.delete(sessionId);

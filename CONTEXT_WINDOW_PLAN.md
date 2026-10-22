@@ -1,6 +1,6 @@
 # Plan: Smart Context Window + Better Step Limit
 
-> **Status:** Phase 0 committed (`48e375f`), Phase 1 committed, Phase 2 committed. Phase 3 not started.
+> **Status:** Phase 0 committed (`48e375f`), Phase 1 committed, Phase 2 committed, Phase 3 committed.
 > **Date:** 2026-10-22
 > **Replaces:** item F2 in [docs/plans/01-harness-fixes.md](docs/plans/01-harness-fixes.md). Item F3 there (per-tool output limits) is still useful and works well together with this plan.
 
@@ -176,12 +176,12 @@ Overflow detection: HTTP 400/413 + message matches
 `AI_MAX_THINKING_STEPS` stays. Its job is now **protection from loops and cost**, not context.
 
 1. **Default 30 -> 60.** Remove the different fallback `|| 25` in [ChatManager.ts:239](backend/ai/ChatManager.ts) (config says 30, code says 25).
-2. **Loop detector.** In one turn, if the model calls the same tool with the same arguments for the 3rd time, we do not run it. We return this tool result instead:
-   `"You already called <tool> with the same arguments 2 times in this task. The result will not change. Use the previous result or try a different approach."`
-   (Arguments are compared after JSON normalization with sorted keys.)
-3. **Summary at the limit.** Now the user gets *"The thinking iteration limit has been exceeded, Try again later."* and all work is lost. New: one last request **without tools** and with the note
-   `"Step limit reached. Do not call tools. Briefly write what is done, what is left, and how to continue."`
-   This answer is saved as the assistant message. The user can then write "continue".
+2. **Loop detector.** In one turn, if the model calls the same tool with the same arguments and the last 2 runs returned the **same result**, we do not run it. We return this tool result instead:
+   `"You already called <tool> with the same arguments 2 times in this task and got the same result. The result will not change. Use the previous result or try a different approach."`
+   (Arguments are compared after JSON normalization with sorted keys. Results are compared by SHA-1. The "same result" rule was added in Phase 3: re-reading a file after editing it is normal work and must not be blocked.)
+3. **Summary at the limit.** Before: the user got *"The thinking iteration limit has been exceeded, Try again later."* and all work was lost. Now: one last request with `tool_choice: "none"` (tool schemas are still sent: Anthropic rejects a history with tool calls when the request has no tools) and the system note
+   `"Step limit reached. Do not call tools. Briefly tell the user what is done, what is left, and that they can say "continue" to resume."`
+   This answer is saved as the assistant message (tool calls in it are dropped, they would have no results). A failed summary request is shown as an error and not saved.
 
 ---
 
@@ -252,8 +252,12 @@ Each phase is done only when `npm test` and `tsc` are green.
   - `OpenRouterService`: one shared in-flight request, 60s backoff after a failed fetch (before: every step would wait the 10s timeout while OpenRouter is down), `getContextLength` with `:variant` fallback
   - tests: retry, anchor, clear-history reset, fit in `AIClient`, no disk read for elided images, context length resolution, OpenRouter backoff/dedupe (106 tests total)
   - known limit: two parallel requests in one session share the state map (last write wins); this only costs a recompute, it never breaks the request. Real fix is F5 (per-session queue)
-- [ ] **Phase 3 — step limit**
-  - default 60, loop detector, summary at limit
+- [x] **Phase 3 — step limit** — done 2026-10-23, committed
+  - `AI_MAX_THINKING_STEPS` default 60 (also: invalid `.env` / `config.json` values no longer become `NaN` = zero steps), `|| 25` fallback removed
+  - `AIClient.sendMessage` 8th parameter is now `options: { contextWindow?, toolChoice? }`
+  - `ChatManager.requestStep`: one request + overflow retry, used by the loop and by the summary
+  - loop detector with the "same result" rule (see section 5), summary at the limit
+  - tests: blocked repeat, changing result not blocked, summary with `tool_choice: none`, failed summary not stored, `tool_choice` in the request body (111 tests total)
 
 One commit per phase (only when you say "commit").
 
@@ -283,5 +287,5 @@ One commit per phase (only when you say "commit").
 
 ## 11. Open questions
 
-1. **`AI_MAX_TOKENS` default is 32,000.** For a 128k model this reserves 25% of the context for the answer. Suggestion: 16,000. Risk: reasoning models count thinking tokens in `max_tokens` on some providers, so too small a value can cut thinking. Change it or keep it?
-2. **Step limit default:** 60 or 100?
+1. **`AI_MAX_TOKENS` default is 32,000.** *(Kept at 32,000 for now; `computeBudget` caps the reserve at half of the context.)* For a 128k model this reserves 25% of the context for the answer. Suggestion: 16,000. Risk: reasoning models count thinking tokens in `max_tokens` on some providers, so too small a value can cut thinking. Change it or keep it?
+2. ~~**Step limit default:** 60 or 100?~~ Decided: 60.
