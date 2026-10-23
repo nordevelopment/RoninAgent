@@ -63,7 +63,7 @@ async function handleDelete(agentId: string) {
       <button
         class="btn-primary cyber-btn--sm"
         :disabled="agentsStore.isLoading"
-        @click="agentsStore.fetchAgents"
+        @click="agentsStore.fetchAgents()"
       >
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="23 4 23 10 17 10"></polyline>

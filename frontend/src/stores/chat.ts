@@ -209,6 +209,7 @@ export const useChatStore = defineStore('chat', () => {
         body: JSON.stringify({ sessionId: currentSessionId.value }),
       });
       if (res.ok) {
+        const data = await res.json();
         const rawHistory = data.history || [];
         messages.value = rawHistory
           .filter((msg: any) => {
@@ -548,6 +549,7 @@ export const useChatStore = defineStore('chat', () => {
     isLoading,
     typingStatusText,
     systemStatus,
+    activeModelName,
     isSetupWarningVisible,
     initialize,
     fetchSessions,
