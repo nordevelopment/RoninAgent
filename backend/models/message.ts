@@ -28,16 +28,10 @@ export interface CreateMessage {
 export class Message {
   constructor(private db: DatabaseClient) { }
 
-  /**
-   * Создать сообщение
-   */
   async create(dto: CreateMessage): Promise<number> {
     return await this.db.insert('messages', dto as unknown as Record<string, unknown>);
   }
 
-  /**
-   * Получить сообщения по session_id в порядке добавления
-   */
   async findBySessionId(sessionId: string): Promise<Message[]> {
     const result = await this.db.query(
       'SELECT * FROM messages WHERE session_id = ? ORDER BY id ASC',
@@ -46,16 +40,10 @@ export class Message {
     return result.rows as Message[];
   }
 
-  /**
-   * Удалить сообщения по session_id
-   */
   async deleteBySessionId(sessionId: string): Promise<number> {
     return await this.db.delete('messages', { session_id: sessionId });
   }
 
-  /**
-   * Удалить сообщение по id
-   */
   async deleteById(id: number): Promise<number> {
     return await this.db.delete('messages', { id });
   }

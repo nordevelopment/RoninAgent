@@ -42,33 +42,25 @@ export interface FileInfo {
 
 export interface ReadFileOptions {
   encoding?: BufferEncoding;
-  limit?: number; // максимальное количество байт для чтения
+  limit?: number;
 }
 
 export class FileSystemManager {
   private allowedRoots: string[];
 
   constructor(allowedRoots?: string[]) {
-    // По умолчанию разрешаем работу только в workspace
     const projectRoot = process.cwd();
     this.allowedRoots = allowedRoots || [path.join(projectRoot, 'workspace')];
 
-    // Автоматически создаем разрешённые директории
     this.initializeDirectories();
   }
 
-  /**
-   * Инициализация разрешённых директорий
-   */
   private initializeDirectories(): void {
     for (const root of this.allowedRoots) {
       ensureDir(root);
     }
   }
 
-  /**
-   * Проверить, что путь находится в разрешённой директории
-   */
   public validatePath(targetPath: string): string {
     if (typeof targetPath !== 'string' || !targetPath.trim()) {
       targetPath = '.';
@@ -77,7 +69,6 @@ export class FileSystemManager {
     }
     let normalizedPath = path.normalize(targetPath);
 
-    // Если путь относительный, конвертируем в абсолютный относительно первого allowedRoot
     if (!path.isAbsolute(normalizedPath)) {
       let cleanPath = targetPath.replace(/\\/g, '/');
       while (cleanPath.startsWith('./')) {
@@ -104,9 +95,6 @@ export class FileSystemManager {
     return normalizedPath;
   }
 
-  /**
-   * Прочитать файл
-   */
   async readFile(filePath: string, options: ReadFileOptions = {}): Promise<string> {
     if (!filePath || typeof filePath !== 'string' || !filePath.trim()) {
       throw new Error("Invalid path parameter: file path must be a non-empty string.");
@@ -138,9 +126,6 @@ export class FileSystemManager {
     return await fs.readFile(validatedPath, options.encoding || 'utf-8');
   }
 
-  /**
-   * Записать файл
-   */
   async writeFile(filePath: string, content: string): Promise<void> {
     const validatedPath = this.validatePath(filePath);
 
@@ -150,9 +135,6 @@ export class FileSystemManager {
     await fs.writeFile(validatedPath, content, 'utf-8');
   }
 
-  /**
-   * Удалить файл
-   */
   async deleteFile(filePath: string): Promise<void> {
     const validatedPath = this.validatePath(filePath);
 
@@ -164,9 +146,6 @@ export class FileSystemManager {
     await fs.unlink(validatedPath);
   }
 
-  /**
-   * Листинг директории
-   */
   async listDirectory(dirPath: string = ''): Promise<FileInfo[]> {
     const validatedPath = this.validatePath(dirPath);
 
@@ -192,24 +171,18 @@ export class FileSystemManager {
       return {
         name: entry.name,
         path: fullPath,
-        size: 0, // заполним ниже
+        size: 0,
         isDirectory: entry.isDirectory(),
         modifiedAt: new Date()
       };
     });
   }
 
-  /**
-   * Создать директорию
-   */
   async createDirectory(dirPath: string, recursive: boolean = true): Promise<void> {
     const validatedPath = this.validatePath(dirPath);
     await fs.mkdir(validatedPath, { recursive });
   }
 
-  /**
-   * Удалить директорию
-   */
   async deleteDirectory(dirPath: string, recursive: boolean = false): Promise<void> {
     const validatedPath = this.validatePath(dirPath);
 
@@ -225,9 +198,6 @@ export class FileSystemManager {
     }
   }
 
-  /**
-   * Проверить существование файла
-   */
   async fileExists(filePath: string): Promise<boolean> {
     try {
       const validatedPath = this.validatePath(filePath);
@@ -238,9 +208,6 @@ export class FileSystemManager {
     }
   }
 
-  /**
-   * Проверить существование директории
-   */
   async directoryExists(dirPath: string): Promise<boolean> {
     try {
       const validatedPath = this.validatePath(dirPath);
@@ -251,9 +218,6 @@ export class FileSystemManager {
     }
   }
 
-  /**
-   * Получить информацию о файле/директории
-   */
   async getStats(itemPath: string): Promise<FileInfo> {
     const validatedPath = this.validatePath(itemPath);
 
@@ -267,9 +231,6 @@ export class FileSystemManager {
     };
   }
 
-  /**
-   * Копировать файл
-   */
   async copyFile(sourcePath: string, destPath: string): Promise<void> {
     const validatedSource = this.validatePath(sourcePath);
     const validatedDest = this.validatePath(destPath);
@@ -280,9 +241,6 @@ export class FileSystemManager {
     await fs.copyFile(validatedSource, validatedDest);
   }
 
-  /**
-   * Переместить/переименовать файл
-   */
   async moveFile(sourcePath: string, destPath: string): Promise<void> {
     const validatedSource = this.validatePath(sourcePath);
     const validatedDest = this.validatePath(destPath);
