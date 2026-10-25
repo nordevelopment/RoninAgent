@@ -1,0 +1,96 @@
+/**
+ * SessionManager - Session management
+ * Responsible for creating, finding and deleting sessions
+ * Author: Norayr Petrosyan
+ */
+import { Session } from '../models/session.js';
+import { DatabaseClient } from '../database/DatabaseClient.js';
+
+export class SessionManager {
+  private sessionModel: Session;
+
+  constructor(db: DatabaseClient) {
+    this.sessionModel = new Session(db);
+  }
+
+  /**
+   * Create new session
+   * @param sessionId - session ID
+   * @param agentId - agent ID
+   * @returns created session
+   */
+  async createSession(sessionId: string, agentId?: string): Promise<Session> {
+    if (agentId && !/^[a-z0-9_-]+$/i.test(agentId)) throw new Error('Invalid agent ID');
+    await this.sessionModel.create({
+      id: sessionId,
+      agent_id: agentId || 'main_agent',
+      workspace_folder: sessionId.startsWith('task_') || sessionId.startsWith('telegram_') ? sessionId : null
+    });
+    return await this.sessionModel.findById(sessionId) as Session;
+  }
+
+  /**
+   * Get session by ID
+   * @param sessionId - session ID
+   * @returns session or null
+   */
+  async getSession(sessionId: string): Promise<Session | null> {
+    return await this.sessionModel.findById(sessionId);
+  }
+
+  /**
+   * Get all sessions
+   * @returns array of sessions
+   */
+  async getAllSessions(): Promise<Session[]> {
+    return await this.sessionModel.findAll();
+  }
+
+  /**
+   * Get last session
+   * @returns last session or null
+   */
+  async getLastSession(): Promise<Session | null> {
+    return await this.sessionModel.findLast();
+  }
+
+  /**
+   * Delete session by ID
+   * @param sessionId - session ID
+   * @returns number of deleted records
+   */
+  async deleteSession(sessionId: string): Promise<number> {
+    return await this.sessionModel.deleteById(sessionId);
+  }
+
+  async isWorkspaceFolderUsedByAnotherSession(folder: string, sessionId: string): Promise<boolean> {
+    return this.sessionModel.isWorkspaceFolderUsedByAnotherSession(folder, sessionId);
+  }
+
+  /**
+   * Update sessions using oldAgentId to use newAgentId
+   */
+  async updateSessionsAgent(oldAgentId: string, newAgentId: string): Promise<number> {
+    return await this.sessionModel.updateAgentId(oldAgentId, newAgentId);
+  }
+
+  /**
+   * Update session title
+   */
+  async updateSessionTitle(sessionId: string, title: string): Promise<number> {
+    let clean = title.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    clean = clean.replace(/^["'`*#\s]+|["'`*#\s]+$/g, '');
+    const lines = clean.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.startsWith('-'));
+    if (lines.length > 0) {
+      clean = lines[lines.length - 1];
+    }
+    if (clean.length > 35) {
+      clean = clean.slice(0, 32).trim() + '...';
+    }
+    return await this.sessionModel.updateTitle(sessionId, clean || 'Chat Session');
+  }
+
+  async setWorkspaceFolder(sessionId: string, folder: string | null): Promise<number> {
+    return await this.sessionModel.updateWorkspaceFolder(sessionId, folder);
+  }
+}

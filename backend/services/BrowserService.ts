@@ -1,0 +1,140 @@
+/**
+ * BrowserService.ts - Puppeteer browser management service
+ * Handles headless Chrome actions for PDF rendering and dynamic scraping.
+ * Author: Norayr Petrosyan
+ */
+
+import puppeteer, { Browser } from 'puppeteer';
+import { validateAndResolveUrl } from '../utils/urlValidator.js';
+
+export class BrowserService {
+  private browser: Browser | null = null;
+
+  /**
+   * Get or launch the headless browser instance
+   */
+  private async getBrowser(): Promise<Browser> {
+    if (!this.browser || !this.browser.connected) {
+      try {
+        const disableSandbox = process.env.PUPPETEER_NO_SANDBOX === '1';
+        this.browser = await puppeteer.launch({
+          headless: true,
+          args: [
+            ...(disableSandbox ? ['--no-sandbox', '--disable-setuid-sandbox'] : []),
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--disable-blink-features=AutomationControlled'
+          ]
+        });
+      } catch (err) {
+        this.browser = null;
+        throw err;
+      }
+    }
+    return this.browser;
+  }
+
+  /**
+   * Close the browser instance if running
+   */
+  async close(): Promise<void> {
+    if (this.browser) {
+      await this.browser.close();
+      this.browser = null;
+    }
+  }
+
+  /**
+   * Generate a PDF file from HTML content
+   * @param htmlContent HTML content to render
+   * @param outputPath Target file path to write the PDF to
+   */
+  async generatePdf(htmlContent: string, outputPath: string): Promise<void> {
+    const browser = await this.getBrowser();
+    const page = await browser.newPage();
+    try {
+      await page.setRequestInterception(true);
+      page.on('request', request => { void request.abort(); });
+      await page.setContent(htmlContent, { waitUntil: 'networkidle0' as any });
+      await page.pdf({
+        path: outputPath,
+        format: 'A4',
+        printBackground: true,
+        margin: {
+          top: '15mm',
+          bottom: '15mm',
+          left: '15mm',
+          right: '15mm'
+        }
+      });
+    } finally {
+      await page.close();
+    }
+  }
+
+  /**
+   * Fetch fully rendered HTML content of a JS-rendered page
+   * @param url URL to load
+   * @returns Fully rendered HTML string
+   */
+  async fetchDynamicPage(url: string, signal?: AbortSignal): Promise<string> {
+    // Security: validate URL before navigating
+    const validation = await validateAndResolveUrl(url);
+    if (!validation.valid) {
+      throw new Error(`URL blocked: ${validation.reason}`);
+    }
+
+    const browser = await this.getBrowser();
+    const page = await browser.newPage();
+    const onAbort = () => { void page.close().catch(() => {}); };
+    try {
+      if (signal?.aborted) throw new Error('Fetch cancelled');
+      signal?.addEventListener('abort', onAbort, { once: true });
+      await page.setRequestInterception(true);
+      page.on('request', request => {
+        void validateAndResolveUrl(request.url())
+          .then(result => result.valid ? request.continue() : request.abort())
+          .catch(() => request.abort().catch(() => {}));
+      });
+      // Set user agent to simulate a standard desktop Chrome to prevent blocking
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+      await page.setViewport({ width: 1280, height: 800 });
+
+      // Bypass anti-bot detection (Cloudflare Turnstile, Datadome, etc.)
+      await page.evaluateOnNewDocument(() => {
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+      });
+
+      // Navigate to page
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+      // Handle transient Cloudflare challenge verification if triggered
+      const title = await page.title();
+      if (title.toLowerCase().includes('just a moment') || title.toLowerCase().includes('cloudflare')) {
+        await page.waitForFunction(() => {
+          const t = document.title.toLowerCase();
+          return !t.includes('just a moment') && !t.includes('cloudflare');
+        }, { timeout: 8000 }).catch(() => {});
+      }
+
+      // Wait until body has some meaningful text (>1000 chars) to ensure SPAs are rendered
+      await page.waitForFunction(() => {
+        const text = document.body ? document.body.innerText.trim() : '';
+        return text.length > 1000;
+      }, { timeout: 10000 }).catch(() => {
+        // Fallback: ignore timeout and proceed
+      });
+
+      // Extra short wait for visual stability
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      const html = await page.content();
+      return html;
+    } finally {
+      signal?.removeEventListener('abort', onAbort);
+      await page.close();
+    }
+  }
+}
+
+export const browserService = new BrowserService();

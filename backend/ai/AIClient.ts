@@ -1,0 +1,790 @@
+/**
+ * AIClient.ts - Client for communication with AI API
+ * Responsible for sending messages to AI and receiving responses
+ * Author: Norayr Petrosyan
+ */
+import { config } from '../config.js';
+import axios from 'axios';
+import fs from 'fs';
+import fsp from 'fs/promises';
+import path from 'path';
+import sharp from 'sharp';
+import logger from '../utils/logger.js';
+import { openRouterService } from '../services/OpenRouterService.js';
+import { FileSystemManager } from '../services/FileSystemManager.js';
+import { sessionWorkspace, sessionAssetUrl } from '../services/SessionWorkspace.js';
+import type { StoredMessage } from './ChatHistoryManager.js';
+import {
+  fitContext,
+  computeBudget,
+  parseContextLimit,
+  roughTextTokens,
+  DEFAULT_CONTEXT_LENGTH,
+  type ContextState
+} from './ContextWindow.js';
+
+
+export interface AIToolCall {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    arguments: string; // Обычно JSON-строка от LLM
+  };
+}
+
+
+export interface AIMessages {
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string | AiContentItem[] | null;
+  tool_call_id?: string; // For role: 'tool' 
+  tool_calls?: AIToolCall[];    // For role: 'assistant' when calling tools
+}
+
+export type AIErrorKind = 'context_overflow' | 'cancelled' | 'empty_response' | 'api';
+
+export interface AIError {
+  kind: AIErrorKind;
+  message: string;
+  status?: number;
+}
+
+export interface AIResponse {
+  /** On error: a user-facing "Error: ..." text, kept for callers that only display content */
+  content: string;
+  toolCalls?: AIToolCall[];
+  reasoning?: string;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+  };
+  /** Set when the request failed; such a response must not be stored as an assistant answer */
+  error?: AIError;
+  /** Set when the history was fitted into the context window */
+  context?: ContextWindowReport;
+}
+
+export interface ContextWindowRequest {
+  state?: ContextState;
+  /** Retry after a context overflow: compress harder than usual */
+  aggressive?: boolean;
+}
+
+export interface SendMessageOptions {
+  sessionId?: string;
+  /** Fit the history into the model context; messages must be stored history (with ids) */
+  contextWindow?: ContextWindowRequest;
+  /**
+   * 'none' forbids tool calls but still sends the tool schemas: some providers (Anthropic)
+   * reject a history with tool calls when the request defines no tools
+   */
+  toolChoice?: 'auto' | 'none';
+}
+
+export interface ContextWindowReport {
+  /** Watermarks after fitting; the anchor is still the one passed in */
+  state: ContextState;
+  roughTokens: number;
+  estimatedTokens: number;
+  budget: number;
+  overBudget: boolean;
+}
+
+function isStoredHistory(messages: AIMessages[]): messages is StoredMessage[] {
+  return messages.every(message => typeof (message as Partial<StoredMessage>).id === 'number');
+}
+
+function isOpenRouterUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return host === 'openrouter.ai' || host.endsWith('.openrouter.ai');
+  } catch {
+    return false;
+  }
+}
+
+const CONTEXT_OVERFLOW_PATTERN = /context length|context_length_exceeded|maximum context|too many tokens|prompt is too long|reduce the length/i;
+
+/**
+ * Rate-limit errors (429) also mention tokens ("tokens per minute"), so they are never treated as overflow.
+ */
+export function classifyApiError(status: number | undefined, message: string, code?: unknown): AIErrorKind {
+  if (status === 429) {
+    return 'api';
+  }
+  if (code === 'context_length_exceeded' || CONTEXT_OVERFLOW_PATTERN.test(message)) {
+    return 'context_overflow';
+  }
+  return 'api';
+}
+
+/**
+ * Copies only the fields the chat-completions API accepts. History messages carry extra
+ * fields (e.g. database id) and strict providers reject unknown message properties.
+ */
+function toApiMessage(msg: AIMessages): AIMessages {
+  const apiMessage: AIMessages = { role: msg.role, content: msg.content };
+  if (msg.tool_calls) {
+    apiMessage.tool_calls = msg.tool_calls;
+  }
+  if (msg.tool_call_id !== undefined) {
+    apiMessage.tool_call_id = msg.tool_call_id;
+  }
+  return apiMessage;
+}
+
+function parseUsage(usage: unknown): AIResponse['usage'] {
+  if (!usage || typeof usage !== 'object') {
+    return undefined;
+  }
+  const { prompt_tokens, completion_tokens } = usage as { prompt_tokens?: unknown; completion_tokens?: unknown };
+  if (typeof prompt_tokens !== 'number' || !Number.isFinite(prompt_tokens)) {
+    return undefined;
+  }
+  return {
+    promptTokens: prompt_tokens,
+    completionTokens: typeof completion_tokens === 'number' && Number.isFinite(completion_tokens) ? completion_tokens : 0,
+  };
+}
+
+export type AIReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+
+export interface AIReasoningConfig {
+  effort?: AIReasoningEffort | string;
+  max_tokens?: number;
+  exclude?: boolean;
+  [key: string]: unknown;
+}
+
+export type AIReasoningParam = AIReasoningEffort | AIReasoningConfig | boolean | null | string;
+
+interface AiContentItem {
+  type: 'text' | 'image_url';
+  text?: string;
+  image_url?: { url: string };
+}
+
+export class AIClient {
+  private sessionFolderResolver?: (sessionId: string) => Promise<string | null>;
+
+  setSessionFolderResolver(resolver: (sessionId: string) => Promise<string | null>): void {
+    this.sessionFolderResolver = resolver;
+  }
+  private customReasoning?: AIReasoningParam;
+  /** Real limits named by providers in overflow errors, per model */
+  private learnedContextLengths = new Map<string, number>();
+
+  get apiKey(): string {
+    return config.AI_API_KEY;
+  }
+  get apiUrl(): string {
+    return config.AI_API_URL || '';
+  }
+  get model(): string {
+    return config.AI_DEFAULT_MODEL;
+  }
+  get reasoning(): AIReasoningParam {
+    if (this.customReasoning !== undefined) {
+      return this.customReasoning;
+    }
+    return config.AI_REASONING_EFFORT || 'medium';
+  }
+  set reasoning(value: AIReasoningParam) {
+    this.customReasoning = value;
+  }
+
+  constructor(options?: { reasoning?: AIReasoningParam }) {
+    if (options?.reasoning !== undefined) {
+      this.customReasoning = options.reasoning;
+    }
+  }
+
+  buildSystemPrompt(agentId: string = 'main_agent'): string {
+    if (!/^[a-z0-9_-]+$/i.test(agentId)) agentId = 'main_agent';
+    const mainAgentPath = path.join(process.cwd(), 'agents', agentId);
+
+    if (fs.existsSync(mainAgentPath)) {
+      // Strict order of file loading
+      const order = [
+        'Identity.md',
+        'User.md',
+        'Agent.md',
+        'Memory.md'
+      ];
+
+      let systemPrompt = '';
+
+      for (const fileName of order) {
+        const filePath = path.join(mainAgentPath, fileName);
+
+        if (fs.existsSync(filePath)) {
+          const content = fs.readFileSync(filePath, 'utf-8');
+          systemPrompt += `\n${content}`;
+        }
+      }
+
+      return systemPrompt.trim();
+
+    } else {
+      console.warn(`AIClient: Agent directory not found: ${agentId}`);
+      return '';
+    }
+  }
+
+  /**
+   * Resolve and match dynamic skills for a given agent and query.
+   * Scans local agent skills (agents/<agentId>/skills/) and shared global skills (skills/),
+   * with local skills taking priority (overriding shared skills with identical filenames).
+   */
+  private resolveMatchingSkills(agentId: string, query: string): Array<{ name: string; body: string; filename: string; isLocal: boolean }> {
+    if (!query) return [];
+    if (!/^[a-z0-9_-]+$/i.test(agentId)) agentId = 'main_agent';
+
+    const queryLower = query.replace(/https?:\/\/[^\s]+/g, '').toLowerCase();
+    const candidateFiles = new Map<string, { filePath: string; isLocal: boolean }>();
+
+    // 1. Scan agent-specific local skills (higher priority)
+    if (agentId) {
+      const localSkillsDir = path.join(process.cwd(), 'agents', agentId, 'skills');
+      if (fs.existsSync(localSkillsDir) && fs.statSync(localSkillsDir).isDirectory()) {
+        const localFiles = fs.readdirSync(localSkillsDir);
+        for (const file of localFiles) {
+          if (file.endsWith('.md')) {
+            candidateFiles.set(file.toLowerCase(), {
+              filePath: path.join(localSkillsDir, file),
+              isLocal: true,
+            });
+          }
+        }
+      }
+    }
+
+    // 2. Scan shared global skills (fallback/base)
+    const sharedSkillsDir = path.join(process.cwd(), 'skills');
+    if (fs.existsSync(sharedSkillsDir) && fs.statSync(sharedSkillsDir).isDirectory()) {
+      const sharedFiles = fs.readdirSync(sharedSkillsDir);
+      for (const file of sharedFiles) {
+        const key = file.toLowerCase();
+        if (file.endsWith('.md') && !candidateFiles.has(key)) {
+          candidateFiles.set(key, {
+            filePath: path.join(sharedSkillsDir, file),
+            isLocal: false,
+          });
+        }
+      }
+    }
+
+    const matchedSkills: Array<{ name: string; body: string; filename: string; isLocal: boolean }> = [];
+
+    for (const [filenameKey, { filePath, isLocal }] of candidateFiles.entries()) {
+      try {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        const lines = content.split(/\r?\n/);
+        if (lines.length === 0) continue;
+
+        let keywords: string[] = [];
+        let phrases: string[] = [];
+        let combinations: Array<{ actions: string[]; targets: string[] }> = [];
+        let excludePhrases: string[] = [];
+        let bodyStartIndex = 0;
+
+        // Parse header metadata directives at the top of the file
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) {
+            bodyStartIndex = i + 1;
+            break;
+          }
+
+          const lineLower = line.toLowerCase();
+          if (lineLower.startsWith('keywords:')) {
+            const parsed = line.substring(9).split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+            keywords.push(...parsed);
+            bodyStartIndex = i + 1;
+          } else if (lineLower.startsWith('phrases:') || lineLower.startsWith('phrase:')) {
+            const colonIdx = line.indexOf(':');
+            const parsed = line.substring(colonIdx + 1).split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
+            phrases.push(...parsed);
+            bodyStartIndex = i + 1;
+          } else if (lineLower.startsWith('combinations:') || lineLower.startsWith('combination:')) {
+            const colonIdx = line.indexOf(':');
+            const combStr = line.substring(colonIdx + 1).trim();
+            const parts = combStr.split('|');
+            if (parts.length >= 2) {
+              const actions = parts[0].split(',').map(a => a.trim().toLowerCase()).filter(Boolean);
+              const targets = parts[1].split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+              if (actions.length > 0 && targets.length > 0) {
+                combinations.push({ actions, targets });
+              }
+            }
+            bodyStartIndex = i + 1;
+          } else if (lineLower.startsWith('exclude:') || lineLower.startsWith('excludes:')) {
+            const colonIdx = line.indexOf(':');
+            const parsed = line.substring(colonIdx + 1).split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+            excludePhrases.push(...parsed);
+            bodyStartIndex = i + 1;
+          } else {
+            // Non-header line reached
+            bodyStartIndex = i;
+            break;
+          }
+        }
+
+        const body = lines.slice(bodyStartIndex).join('\n').trim();
+
+        // Fallback if no directives were specified
+        if (keywords.length === 0 && phrases.length === 0 && combinations.length === 0) {
+          const filenameKeyword = filenameKey.replace(/\.md$/, '');
+          keywords = [filenameKeyword];
+        }
+
+        // 1. Check exclusions first (immediate suppression)
+        const isExcluded = excludePhrases.some(ex => {
+          if (!ex) return false;
+          return queryLower.includes(ex);
+        });
+
+        if (isExcluded) {
+          continue;
+        }
+
+        const testWordBoundary = (word: string): boolean => {
+          if (!word) return false;
+          const escaped = word.replace(/[\/\\^$*+?.()|[\]{}]/g, '\\$&');
+          const regex = new RegExp(`(?<!\\p{L})${escaped}(?!\\p{L})`, 'gu');
+          return regex.test(queryLower);
+        };
+
+        // 2. Check exact phrases
+        let isMatched = phrases.some(phrase => {
+          if (!phrase) return false;
+          return queryLower.includes(phrase);
+        });
+
+        // 3. Check combinations (Action + Target requirement)
+        if (!isMatched && combinations.length > 0) {
+          isMatched = combinations.some(({ actions, targets }) => {
+            const hasAction = actions.some(act => testWordBoundary(act) || queryLower.includes(act));
+            const hasTarget = targets.some(tgt => testWordBoundary(tgt) || queryLower.includes(tgt));
+            return hasAction && hasTarget;
+          });
+        }
+
+        // 4. Check keywords with whole-word boundary
+        if (!isMatched && keywords.length > 0) {
+          isMatched = keywords.some(keyword => testWordBoundary(keyword));
+        }
+
+        if (isMatched) {
+          const rawBasename = path.basename(filePath, '.md');
+          const skillName = rawBasename.toUpperCase();
+          matchedSkills.push({
+            name: skillName,
+            body: body || content.trim(),
+            filename: path.basename(filePath),
+            isLocal,
+          });
+          logger.debug(`[AIClient] Dynamic skill loaded: ${path.basename(filePath)} (${isLocal ? 'local override' : 'shared'})`);
+        }
+      } catch (err) {
+        logger.error({ err }, `[AIClient] Failed to read skill file ${filePath}`);
+      }
+    }
+
+    return matchedSkills;
+  }
+
+  /**
+   * Search for matching skills (local agent skills + global shared skills) based on query
+   */
+  getMatchingSkills(agentId: string, query: string): string {
+    const matched = this.resolveMatchingSkills(agentId, query);
+    return matched.map(s => `### SKILL: ${s.name}\n${s.body}`).join('\n\n');
+  }
+
+  /**
+   * Search for matching skills (local agent skills + global shared skills) and return their names
+   */
+  getMatchingSkillsList(agentId: string, query: string): string[] {
+    const matched = this.resolveMatchingSkills(agentId, query);
+    return matched.map(s => s.name);
+  }
+
+
+  /**
+   * Format reasoning parameter for the API request body.
+   * OpenRouter and OpenAI unified format: { reasoning: { effort: 'medium', ... } }
+   * If disabled (false, null, 'off'), returns undefined to omit from payload.
+   */
+  formatReasoningParam(reasoning?: AIReasoningParam): AIReasoningConfig | undefined {
+    const target = reasoning !== undefined ? reasoning : this.reasoning;
+
+    if (target === false || target === null) {
+      return undefined;
+    }
+
+    if (target === true) {
+      return { effort: 'medium' };
+    }
+
+    if (typeof target === 'string') {
+      const trimmed = target.trim();
+      if (!trimmed || trimmed === 'off' || trimmed === 'false') {
+        return undefined;
+      }
+      return { effort: trimmed };
+    }
+
+    if (typeof target === 'object') {
+      return target as AIReasoningConfig;
+    }
+
+    return { effort: 'medium' };
+  }
+
+  /**
+   * Context length of a model: manual setting, then the limit learned from an overflow
+   * error, then OpenRouter /models (only when talking to OpenRouter), then a safe default.
+   */
+  async resolveContextLength(model: string): Promise<number> {
+    if (config.AI_CONTEXT_WINDOW > 0) {
+      return config.AI_CONTEXT_WINDOW;
+    }
+    const learned = this.learnedContextLengths.get(model);
+    if (learned) {
+      return learned;
+    }
+    if (isOpenRouterUrl(this.apiUrl)) {
+      const fromOpenRouter = await openRouterService.getContextLength(model);
+      if (fromOpenRouter) {
+        return fromOpenRouter;
+      }
+    }
+    return DEFAULT_CONTEXT_LENGTH;
+  }
+
+  /**
+   * Send a message to AI
+   * @param messages - array of messages (dialog history)
+   * @param agentId - ID of the agent (folder name in agents/)
+   * @param tools - list of available tools (from AITools.getAvailableTools())
+   * @param additionalSystem - additional system prompt (e.g., memory context)
+   * @param skipSkills - whether to skip dynamic skills
+   * @param signal - AbortSignal for request cancellation
+   * @param reasoning - reasoning parameter (defaults to 'medium' from this.reasoning)
+   * @param options - context window fitting and tool choice
+   * @returns ответ от AI
+   */
+  async sendMessage(
+    messages: AIMessages[],
+    agentId?: string,
+    tools?: any[],
+    additionalSystem?: string,
+    skipSkills?: boolean,
+    signal?: AbortSignal,
+    reasoning?: AIReasoningParam,
+    options: SendMessageOptions = {}
+  ): Promise<AIResponse> {
+    const { contextWindow, toolChoice = 'auto' } = options;
+    const model = this.model;
+    const systemPrompt = this.buildSystemPrompt(agentId);
+
+    // Skills are matched on the full history, before fitting, so the current task always counts
+    let userQuery = '';
+    let activeSkillsContent = '';
+
+    if (!skipSkills) {
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role === 'user') {
+          const content = messages[i].content;
+          if (typeof content === 'string') {
+            userQuery = content;
+            break;
+          } else if (Array.isArray(content)) {
+            userQuery = content
+              .filter(item => item.type === 'text')
+              .map(item => item.text)
+              .join(' ');
+            break;
+          }
+        }
+      }
+
+      if (userQuery) {
+        activeSkillsContent = this.getMatchingSkills(agentId || 'main_agent', userQuery);
+      }
+    }
+
+    let finalSystemPrompt = systemPrompt;
+    if (activeSkillsContent) {
+      finalSystemPrompt = finalSystemPrompt ? `${finalSystemPrompt}\n\n[ACTIVE SKILLS]\n${activeSkillsContent}` : activeSkillsContent;
+    }
+    if (additionalSystem) {
+      finalSystemPrompt = finalSystemPrompt ? `${finalSystemPrompt}\n${additionalSystem}` : additionalSystem;
+    }
+
+    let historyToSend: AIMessages[] = messages;
+    let contextReport: ContextWindowReport | undefined;
+    if (contextWindow) {
+      if (isStoredHistory(messages)) {
+        const budget = computeBudget(await this.resolveContextLength(model), config.AI_MAX_TOKENS);
+        const fixedTokens = roughTextTokens(finalSystemPrompt) + (tools?.length ? roughTextTokens(JSON.stringify(tools)) : 0);
+        const fitted = fitContext({
+          messages,
+          fixedTokens,
+          budget,
+          model,
+          state: contextWindow.state,
+          aggressive: contextWindow.aggressive
+        });
+        historyToSend = fitted.messages;
+        contextReport = {
+          state: fitted.state,
+          roughTokens: fitted.roughTokens,
+          estimatedTokens: fitted.estimatedTokens,
+          budget,
+          overBudget: fitted.overBudget
+        };
+        const logContext = {
+          model,
+          budget,
+          estimatedTokens: fitted.estimatedTokens,
+          messages: messages.length,
+          sentMessages: fitted.messages.length,
+          aggressive: !!contextWindow.aggressive
+        };
+        if (fitted.overBudget) {
+          logger.warn(logContext, '[AIClient] Request is over the context budget even after compression');
+        } else {
+          logger.debug(logContext, '[AIClient] Context window fitted');
+        }
+      } else {
+        logger.error('[AIClient] Context window requested for messages without database ids; sending them unfitted');
+      }
+    }
+
+    // Read stored images as base64 only after fitting, so elided old images never touch the disk
+    const processedMessages: AIMessages[] = await Promise.all(historyToSend.map(async (sourceMsg): Promise<AIMessages> => {
+      const msg = toApiMessage(sourceMsg);
+      if (Array.isArray(msg.content)) {
+        const newContent: AiContentItem[] = await Promise.all(msg.content.map(async (item): Promise<AiContentItem> => {
+          if (item.type === 'image_url' && item.image_url && (item.image_url.url.startsWith('/workspace/') || item.image_url.url.startsWith('/storage/') || item.image_url.url.startsWith('/api/workspace/assets/'))) {
+            try {
+              const relativePath = item.image_url.url;
+              let fullPath: string;
+              if (relativePath.startsWith('/api/workspace/assets/')) {
+                const match = /^\/api\/workspace\/assets\/([^/]+)\/images\/([a-zA-Z0-9_-]+\.jpe?g)$/.exec(relativePath);
+                if (!match || !options.sessionId || decodeURIComponent(match[1]) !== options.sessionId || !this.sessionFolderResolver) throw new Error('Image is outside this session');
+                const folder = await this.sessionFolderResolver(options.sessionId);
+                if (!folder) throw new Error('Session folder is unavailable');
+                const { root, manager } = sessionWorkspace(folder, new FileSystemManager());
+                fullPath = manager.validatePath(path.join(root, 'images', match[2]));
+              } else {
+                const cleanPath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
+                fullPath = path.join(process.cwd(), cleanPath);
+              }
+              const fileData = await fsp.readFile(fullPath);
+              const base64 = fileData.toString('base64');
+              const mimeType = 'image/jpeg';
+              return {
+                type: 'image_url' as const,
+                image_url: {
+                  url: `data:${mimeType};base64,${base64}`
+                }
+              };
+            } catch (err) {
+              console.error('Error reading stored image for AI request:', err);
+              return item;
+            }
+          }
+          return item;
+        }));
+        return { ...msg, content: newContent };
+      }
+      return msg;
+    }));
+
+    // Add system prompt to the beginning of messages
+    const messagesWithSystem: AIMessages[] = [];
+    if (finalSystemPrompt) {
+      messagesWithSystem.push({
+        role: 'system',
+        content: finalSystemPrompt,
+      });
+    }
+    messagesWithSystem.push(...processedMessages);
+
+    // Real code to send a request to the AI API
+    // For example, using axios
+    const requestBody: Record<string, unknown> = {
+      model,
+      messages: messagesWithSystem,
+      temperature: config.AI_TEMPERATURE,
+      max_tokens: config.AI_MAX_TOKENS,
+    };
+
+    const formattedReasoning = this.formatReasoningParam(reasoning);
+    if (formattedReasoning) {
+      requestBody.reasoning = formattedReasoning;
+    }
+
+    // If tools are passed, add them to the request
+    if (tools && tools.length > 0) {
+      requestBody.tools = tools;
+      requestBody.tool_choice = toolChoice;
+    }
+
+    const response = await this.requestCompletion(requestBody, signal);
+
+    if (response.error?.kind === 'context_overflow') {
+      const limit = parseContextLimit(response.error.message);
+      if (limit) {
+        this.learnedContextLengths.set(model, limit);
+        logger.warn({ model, limit }, '[AIClient] Learned the model context length from an overflow error');
+      }
+    }
+
+    return contextReport ? { ...response, context: contextReport } : response;
+  }
+
+  private async requestCompletion(requestBody: Record<string, unknown>, signal?: AbortSignal): Promise<AIResponse> {
+    try {
+      const response = await axios.post(
+        this.apiUrl,
+        requestBody,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+            'X-Title': 'RoninAgent'
+          },
+          timeout: config.AI_TIMEOUT,
+          signal
+        }
+      );
+
+      const data = response.data;
+      const usage = parseUsage(data?.usage);
+
+      // OpenRouter can report an upstream provider failure with HTTP 200 and an `error` body
+      if (data?.error && !data.choices?.length) {
+        const apiErrorMessage = String(data.error.message || 'Unknown provider error');
+        const status = typeof data.error.code === 'number' ? data.error.code : undefined;
+        return {
+          content: 'Error: AI response ' + apiErrorMessage,
+          usage,
+          error: {
+            kind: classifyApiError(status, apiErrorMessage, data.error.code),
+            message: apiErrorMessage,
+            status,
+          },
+        };
+      }
+
+      const message = data.choices?.[0]?.message;
+      let reasoning = message?.reasoning_content || message?.reasoning || undefined;
+      let content = message?.content || '';
+
+      // Extract inline <think>...</think> if reasoning model puts thought trace inside content
+      const thinkMatch = content.match(/<think>([\s\S]*?)<\/think>/i);
+      if (thinkMatch) {
+        if (!reasoning) {
+          reasoning = thinkMatch[1].trim();
+        }
+        content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+      }
+
+      // If there is no text, no function calls, no reasoning, then there is trouble
+      if (!content && (!message?.tool_calls || message.tool_calls.length === 0) && !reasoning) {
+        return {
+          content: 'Error: AI response not received',
+          usage,
+          error: { kind: 'empty_response', message: 'AI response not received' },
+        };
+      }
+
+      return {
+        content: content,
+        toolCalls: message?.tool_calls || undefined,
+        reasoning: reasoning,
+        usage,
+      };
+
+    } catch (error: any) {
+      if (axios.isCancel(error) || error.name === 'CanceledError' || error.code === 'ERR_CANCELED' || signal?.aborted) {
+        return {
+          content: 'Error: Request was cancelled by user',
+          error: { kind: 'cancelled', message: 'Request was cancelled by user' },
+        };
+      }
+      if (axios.isAxiosError(error)) {
+        console.error('AIClient: Axios Error ', error.response?.data);
+        const status = error.response?.status;
+        const apiError = (error.response?.data as { error?: { message?: string; code?: unknown } } | undefined)?.error;
+        const apiErrorMessage = apiError?.message || error.message;
+        return {
+          content: 'Error: AI response ' + apiErrorMessage,
+          error: {
+            kind: classifyApiError(status, apiErrorMessage, apiError?.code),
+            message: apiErrorMessage,
+            status,
+          },
+        };
+      } else {
+        console.error('AIClient: Error ', error);
+        return {
+          content: 'Error: AI response ' + error.message,
+          error: { kind: 'api', message: String(error?.message ?? error) },
+        };
+      }
+    }
+  }
+
+
+  /**
+   * Process and resize incoming images
+   */
+  async processImage(imageData: { base64: string, url: string }, sessionId?: string, logger?: any, workspaceFolder?: string): Promise<{ filePath: string, base64Image: string }> {
+    try {
+      const matches = imageData.base64.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
+      const data = matches ? matches[2] : imageData.base64;
+      const imgBuffer = Buffer.from(data, 'base64');
+
+      const metadata = await sharp(imgBuffer).metadata();
+      let pipeline = sharp(imgBuffer);
+      if (metadata.width && metadata.width > 1024) {
+        pipeline = pipeline.resize({ width: 1024 });
+      }
+
+      const resized = await pipeline
+        .jpeg({ quality: 85 })
+        .toBuffer();
+
+      // Convert to base64
+      const base64Image = `data:image/jpeg;base64,${resized.toString('base64')}`;
+
+      // Save image to session workspace
+      const sessionFolderName = workspaceFolder || ((sessionId && (sessionId.startsWith('session_') || sessionId.startsWith('telegram_')))
+        ? sessionId
+        : `session_${sessionId || 'global'}`);
+      const filename = `${Date.now()}.jpg`;
+      const fsManager = new FileSystemManager();
+      const { root, manager } = sessionWorkspace(sessionFolderName, fsManager);
+      const imagesDir = manager.validatePath(path.join(root, 'images'));
+      await fsp.mkdir(imagesDir, { recursive: true });
+      const fullPath = path.join(imagesDir, filename);
+      manager.validatePath(fullPath);
+      await fsp.writeFile(fullPath, resized, { flag: 'wx' });
+
+      // Return relative path for frontend use
+      const filePath = sessionAssetUrl(sessionFolderName, sessionId || 'global', filename);
+
+      return { filePath, base64Image };
+
+    } catch (err: any) {
+      logger?.error({ error: err.message }, '[AI SERVICE] Image processing error');
+      throw new Error('Image processing failed');
+    }
+  }
+
+}

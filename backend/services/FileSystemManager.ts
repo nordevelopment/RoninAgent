@@ -1,0 +1,355 @@
+/**
+ * FileSystemManager.ts - File system management
+ * Safe file and directory operations for AI tools
+ * Author: Norayr Petrosyan
+ */
+
+import fs from 'fs/promises';
+import fsSync from 'fs';
+import path from 'path';
+import { exec } from 'child_process';
+import { config } from '../config.js';
+
+/**
+ * Create directory if not exists (synchronous)
+ */
+function ensureDir(dirPath: string): void {
+  try {
+    fsSync.mkdirSync(dirPath, { recursive: true });
+  } catch (error) {
+    // Ignore error if directory already exists
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+      throw error;
+    }
+  }
+}
+
+export interface UploadedFileInfo {
+  name: string;
+  savedName: string;
+  path: string;
+  size: number;
+  mimetype?: string;
+}
+
+export interface FileInfo {
+  name: string;
+  path: string;
+  size: number;
+  isDirectory: boolean;
+  modifiedAt: Date;
+}
+
+export interface ReadFileOptions {
+  encoding?: BufferEncoding;
+  limit?: number;
+}
+
+export class FileSystemManager {
+  private allowedRoots: string[];
+
+  constructor(allowedRoots?: string[]) {
+    const projectRoot = process.cwd();
+    this.allowedRoots = allowedRoots || [path.join(projectRoot, 'workspace')];
+
+    this.initializeDirectories();
+  }
+
+  private initializeDirectories(): void {
+    for (const root of this.allowedRoots) {
+      ensureDir(root);
+    }
+  }
+
+  public validatePath(targetPath: string): string {
+    if (typeof targetPath !== 'string' || !targetPath.trim()) {
+      targetPath = '.';
+    } else {
+      targetPath = targetPath.trim();
+    }
+    let normalizedPath = path.normalize(targetPath);
+
+    if (!path.isAbsolute(normalizedPath)) {
+      let cleanPath = targetPath.replace(/\\/g, '/');
+      while (cleanPath.startsWith('./')) {
+        cleanPath = cleanPath.substring(2);
+      }
+      if (cleanPath === 'workspace' || cleanPath === '.') {
+        cleanPath = '';
+      } else if (cleanPath.startsWith('workspace/')) {
+        cleanPath = cleanPath.substring(10);
+      }
+      normalizedPath = path.normalize(path.join(this.allowedRoots[0], cleanPath));
+    }
+
+    const isAllowed = this.allowedRoots.some(root => {
+      const normalizedRoot = path.normalize(root);
+      const relative = path.relative(normalizedRoot, normalizedPath);
+      return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+    });
+
+    if (!isAllowed) {
+      throw new Error(`Access denied: path ${targetPath} is outside allowed directories`);
+    }
+
+    // Lexical containment is insufficient: a symlink or Windows junction inside
+    // workspace can point outside it. Reject links in every existing component.
+    for (const root of this.allowedRoots) {
+      const relative = path.relative(path.resolve(root), normalizedPath);
+      if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) {
+        let current = path.resolve(root);
+        if (fsSync.lstatSync(current).isSymbolicLink()) {
+          throw new Error('Access denied: workspace root is a symbolic link');
+        }
+        for (const component of relative.split(path.sep).filter(Boolean)) {
+          current = path.join(current, component);
+          try {
+            if (fsSync.lstatSync(current).isSymbolicLink()) {
+              throw new Error(`Access denied: symbolic link in path ${targetPath}`);
+            }
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === 'ENOENT') break;
+            throw error;
+          }
+        }
+        break;
+      }
+    }
+
+    return normalizedPath;
+  }
+
+  async readFile(filePath: string, options: ReadFileOptions = {}): Promise<string> {
+    if (!filePath || typeof filePath !== 'string' || !filePath.trim()) {
+      throw new Error("Invalid path parameter: file path must be a non-empty string.");
+    }
+    const validatedPath = this.validatePath(filePath);
+
+    const stats = await fs.stat(validatedPath);
+    if (stats.isDirectory()) {
+      throw new Error(`Path ${filePath} is a directory, not a file`);
+    }
+
+    const limit = config.AI_MAX_FILE_READ_SIZE || 1024 * 1024; // Use config value or fallback to 1MB
+    if (stats.size > limit) {
+      const handle = await fs.open(validatedPath, 'r');
+      try {
+        const buffer = Buffer.alloc(limit);
+        await handle.read(buffer, 0, limit, 0);
+        const text = buffer.toString(options.encoding || 'utf-8');
+        return `${text}\n\n[WARNING: File was truncated. Total size is ${stats.size} bytes, but only the first ${limit} bytes were read to prevent OOM/token burn.]`;
+      } finally {
+        await handle.close();
+      }
+    }
+
+    if (options.limit && stats.size > options.limit) {
+      throw new Error(`File ${validatedPath} exceeds size limit of ${options.limit} bytes`);
+    }
+
+    return await fs.readFile(validatedPath, options.encoding || 'utf-8');
+  }
+
+  async writeFile(filePath: string, content: string): Promise<void> {
+    const validatedPath = this.validatePath(filePath);
+
+    const dir = path.dirname(validatedPath);
+    await fs.mkdir(dir, { recursive: true });
+
+    await fs.writeFile(validatedPath, content, 'utf-8');
+  }
+
+  async deleteFile(filePath: string): Promise<void> {
+    const validatedPath = this.validatePath(filePath);
+
+    const stats = await fs.stat(validatedPath);
+    if (stats.isDirectory()) {
+      throw new Error(`Path ${validatedPath} is a directory, use deleteDirectory instead`);
+    }
+
+    await fs.unlink(validatedPath);
+  }
+
+  async listDirectory(dirPath: string = ''): Promise<FileInfo[]> {
+    const validatedPath = this.validatePath(dirPath);
+
+    try {
+      const stats = await fs.stat(validatedPath);
+      if (!stats.isDirectory()) {
+        throw new Error(`Path ${validatedPath} is not a directory`);
+      }
+    } catch (err: any) {
+      if (err.code === 'ENOENT') {
+        // If directory doesn't exist yet (e.g. fresh session folder in workspace),
+        // ensure it exists or return [] instead of throwing an ENOENT crash
+        await fs.mkdir(validatedPath, { recursive: true });
+        return [];
+      }
+      throw err;
+    }
+
+    const entries = await fs.readdir(validatedPath, { withFileTypes: true });
+
+    return entries.map(entry => {
+      const fullPath = path.join(validatedPath, entry.name);
+      return {
+        name: entry.name,
+        path: fullPath,
+        size: 0,
+        isDirectory: entry.isDirectory(),
+        modifiedAt: new Date()
+      };
+    });
+  }
+
+  async createDirectory(dirPath: string, recursive: boolean = true): Promise<void> {
+    const validatedPath = this.validatePath(dirPath);
+    await fs.mkdir(validatedPath, { recursive });
+  }
+
+  async deleteDirectory(dirPath: string, recursive: boolean = false): Promise<void> {
+    const validatedPath = this.validatePath(dirPath);
+    if (this.allowedRoots.some(root => path.resolve(root) === path.resolve(validatedPath))) {
+      throw new Error('Access denied: cannot delete the workspace root');
+    }
+
+    const stats = await fs.stat(validatedPath);
+    if (!stats.isDirectory()) {
+      throw new Error(`Path ${validatedPath} is not a directory`);
+    }
+
+    if (recursive) {
+      await fs.rm(validatedPath, { recursive: true, force: true });
+    } else {
+      await fs.rmdir(validatedPath);
+    }
+  }
+
+  async fileExists(filePath: string): Promise<boolean> {
+    try {
+      const validatedPath = this.validatePath(filePath);
+      const stats = await fs.stat(validatedPath);
+      return stats.isFile();
+    } catch {
+      return false;
+    }
+  }
+
+  async directoryExists(dirPath: string): Promise<boolean> {
+    try {
+      const validatedPath = this.validatePath(dirPath);
+      const stats = await fs.stat(validatedPath);
+      return stats.isDirectory();
+    } catch {
+      return false;
+    }
+  }
+
+  async getStats(itemPath: string): Promise<FileInfo> {
+    const validatedPath = this.validatePath(itemPath);
+
+    const stats = await fs.stat(validatedPath);
+    return {
+      name: path.basename(validatedPath),
+      path: validatedPath,
+      size: stats.size,
+      isDirectory: stats.isDirectory(),
+      modifiedAt: stats.mtime
+    };
+  }
+
+  async copyFile(sourcePath: string, destPath: string): Promise<void> {
+    const validatedSource = this.validatePath(sourcePath);
+    const validatedDest = this.validatePath(destPath);
+
+    const destDir = path.dirname(validatedDest);
+    await fs.mkdir(destDir, { recursive: true });
+
+    await fs.copyFile(validatedSource, validatedDest);
+  }
+
+  async moveFile(sourcePath: string, destPath: string): Promise<void> {
+    const validatedSource = this.validatePath(sourcePath);
+    const validatedDest = this.validatePath(destPath);
+
+    const destDir = path.dirname(validatedDest);
+    await fs.mkdir(destDir, { recursive: true });
+
+    await fs.rename(validatedSource, validatedDest);
+  }
+
+  /**
+   * Save an uploaded file into session workspace folder safely
+   */
+  async saveUploadedFile(
+    originalFilename?: string,
+    buffer?: Buffer,
+    mimetype?: string,
+    workspaceFolder?: string
+  ): Promise<UploadedFileInfo> {
+    if (!workspaceFolder) throw new Error('Select a workspace folder before uploading files');
+    const external = path.isAbsolute(workspaceFolder);
+    if (external && (await fs.realpath(workspaceFolder)) !== path.resolve(workspaceFolder)) {
+      throw new Error('Selected folder is unavailable or has changed');
+    }
+    const manager = external ? new FileSystemManager([workspaceFolder]) : this;
+    const sessionDir = manager.validatePath(workspaceFolder);
+    await fs.mkdir(sessionDir, { recursive: true });
+
+    const rawName = originalFilename || 'uploaded_document';
+    const cleanName = path.basename(rawName).replace(/[^\w\d_.\-\s\u0400-\u04FF]/g, '_');
+    const safeName = cleanName || 'uploaded_document';
+    const extension = path.extname(safeName);
+    const stem = path.basename(safeName, extension);
+    let savedName = safeName;
+    let targetFilePath = manager.validatePath(path.join(sessionDir, savedName));
+    while (fsSync.existsSync(targetFilePath)) {
+      savedName = `${stem}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${extension}`;
+      targetFilePath = manager.validatePath(path.join(sessionDir, savedName));
+    }
+
+    if (buffer) {
+      await fs.writeFile(targetFilePath, buffer, { flag: 'wx' });
+    }
+
+    const stats = await fs.stat(targetFilePath);
+    const uploadedPath = external ? targetFilePath : `${workspaceFolder}/${savedName}`;
+
+    return {
+      name: rawName,
+      savedName,
+      path: uploadedPath,
+      size: stats.size,
+      mimetype
+    };
+  }
+
+  /**
+   * Open workspace root directory in operating system's native file explorer
+   */
+  async openWorkspaceInExplorer(): Promise<string> {
+    const projectRoot = process.cwd();
+    const workspacePath = path.resolve(projectRoot, 'workspace');
+    await fs.mkdir(workspacePath, { recursive: true });
+
+    const platform = process.platform;
+    let command = '';
+    if (platform === 'win32') {
+      command = `start "" "${workspacePath}"`;
+    } else if (platform === 'darwin') {
+      command = `open "${workspacePath}"`;
+    } else {
+      command = `xdg-open "${workspacePath}"`;
+    }
+
+    return new Promise((resolve) => {
+      exec(command, (err) => {
+        if (err && platform === 'win32') {
+          exec(`explorer "${workspacePath}"`, () => resolve(workspacePath));
+        } else {
+          resolve(workspacePath);
+        }
+      });
+    });
+  }
+}

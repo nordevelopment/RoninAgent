@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoninAgent - Sovereign, Lightweight & Fast Autonomous AI Agent</title>
+    <meta name="description"
+        content="RoninAgent - Ultra-fast, zero-bloat sovereign personal AI assistant. Features Visual Web Setup Wizard, Web Scraper, PDF & Office Doc Generators, AI Image Gen, Task Scheduler, Vector Memory & Telegram integration.">
+    <meta name="keywords"
+        content="AI Agent, Personal AI, RoninAgent, Web Scraper, PDF Generator, Document Generator, Image Generation, Task Scheduler, Telegram Bot, SQLite vector, Web UI, TypeScript, lightweight AI">
+    <meta name="author" content="Norayr Petrosyan">
+    <meta name="robots" content="index, follow">
+    <link rel="icon"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23042f3a'/%3E%3Cpath d='M17 46 46 17M18 17l29 29' stroke='%2322d3ee' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://github.com/nordevelopment/RoninAgent">
+    <meta property="og:title" content="RoninAgent - Ultra-Fast Sovereign Personal AI Agent">
+    <meta property="og:description"
+        content="A lightweight, lightning-fast, and highly secure Personal AI Agent running locally on your hardware. Zero bloat, maximum performance.">
+    <meta property="og:image"
+        content="https://raw.githubusercontent.com/nordevelopment/RoninAgent/main/frontend/assets/og-image.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://github.com/nordevelopment/RoninAgent">
+    <meta property="twitter:title" content="RoninAgent - Lightweight Personal AI Assistant">
+    <meta property="twitter:description"
+        content="A lightweight, lightning-fast, and highly secure Personal AI Agent running locally on your hardware.">
+    <meta property="twitter:image"
+        content="https://raw.githubusercontent.com/nordevelopment/RoninAgent/main/frontend/assets/og-image.png">
+
+    <!-- Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <script>
+        (function () {
+            try {
+                const savedTheme = localStorage.getItem('ronin-theme');
+                const preferredTheme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', savedTheme || preferredTheme);
+            } catch (_) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+
+    <link rel="stylesheet" href="frontend/css/landing.css">
+</head>
+
+<body>
+
+    <!-- Primary navigation -->
+    <nav class="site-nav">
+        <a href="index.html" class="site-nav__brand">⚔️ RoninAgent</a>
+        <button class="site-nav__burger" id="navBurger" aria-label="Toggle navigation" aria-expanded="false">
+            <span></span><span></span><span></span>
+        </button>
+        <ul class="site-nav__links" id="navLinks">
+            <li><a href="index.html" class="site-nav__link site-nav__link--active">Home</a></li>
+            <li><a href="#capabilities" class="site-nav__link">Capabilities</a></li>
+            <li><a href="#scenarios" class="site-nav__link">Use Cases</a></li>
+            <li><a href="#setup" class="site-nav__link">Quick Start</a></li>
+            <li><a href="#faq" class="site-nav__link">FAQ</a></li>
+            <li><a href="docs.html" class="site-nav__link">Docs</a></li>
+            <li><a href="https://github.com/nordevelopment/RoninAgent" class="site-nav__link"
+                    target="_blank">GitHub</a>
+            </li>
+        </ul>
+        <div class="site-nav__actions">
+            <select class="theme-select-control theme-select">
+                <option value="dark">🌙 Dark</option>
+                <option value="light">☀️ Light</option>
+            </select>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="section-hero">
+        <div class="container">
+            <h1 class="hero-title" data-text="RONIN AGENT">⚔️ RONIN AGENT</h1>
+            <p class="hero-subtitle">
+                An ultra-fast, zero-bloat, local-first <span class="highlight-text">Autonomous AI Agent</span> running
+                directly on your hardware.
+                Built with pure TypeScript performance, fast startup, a visual Web Setup Wizard, and an
+                autonomous tool engine for web scraping, document generation, image synthesis, and scheduled tasks.
+            </p>
+
+            <!-- Metrics Banner -->
+            <div class="metrics-banner">
+                <div class="metric-pill">
+                    <span>⚡ Boot Speed:</span>
+                    <span class="metric-pill__val">1–3 Seconds</span>
+                </div>
+                <div class="metric-pill">
+                    <span>💾 RAM Footprint:</span>
+                    <span class="metric-pill__val">~100–150 MB</span>
+                </div>
+                <div class="metric-pill">
+                    <span>🐳 Docker:</span>
+                    <span class="metric-pill__val">Zero (Native Node.js)</span>
+                </div>
+                <div class="metric-pill">
+                    <span>🗄️ Data Storage:</span>
+                    <span class="metric-pill__val">Local SQLite</span>
+                </div>
+                <div class="metric-pill">
+                    <span>💬 Dual Interface:</span>
+                    <span class="metric-pill__val">Web UI + Telegram</span>
+                </div>
+            </div>
+
+            <!-- Supported LLMs Banner -->
+            <div class="models-ecosystem">
+                <div class="models-title">⚡ Bring Your Own LLM — Local & Cloud (Zero Lock-in)</div>
+                <div class="models-list">
+                    <span class="model-chip">🦙 Ollama</span>
+                    <span class="model-chip">🐳 LM Studio</span>
+                    <span class="model-chip">🐋 DeepSeek</span>
+                    <span class="model-chip">✨ Google Gemini</span>
+                    <span class="model-chip">🟢 OpenAI</span>
+                    <span class="model-chip">🟣 Anthropic Claude</span>
+                    <span class="model-chip">⚡ X.AI Grok</span>
+                    <span class="model-chip">🚀 Together AI</span>
+                    <span class="model-chip">🌐 OpenRouter</span>
+                </div>
+            </div>
+
+            <div class="hero-buttons">
+                <a href="#setup" class="btn btn--primary btn--lg">
+                    <span>Quick Start</span>
+                </a>
+                <a href="#capabilities" class="btn btn--primary btn--lg">
+                    <span>Explore Capabilities</span>
+                </a>
+                <a href="https://github.com/nordevelopment/RoninAgent" class="btn btn--secondary btn--lg"
+                    target="_blank">
+                    <span>View on GitHub</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+
+    <!-- Deep-Dive Agent Capabilities Grid -->
+    <section id="capabilities" class="section-padding">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">🛠️ Agent Capabilities & Tools</h2>
+                <p class="section-description">
+                    RoninAgent is equipped with built-in, production-grade tools for web scraping, file creation,
+                    document generation, image synthesis, and autonomous task scheduling.
+                </p>
+            </div>
+
+            <div class="content-grid--3">
+
+                <!-- Web Scraper -->
+                <div class="feature-card feature-card--interactive">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">🕸️</div>
+                        <h3 class="feature-card__title">Smart Web Scraper</h3>
+                        <span class="feature-card__badge">STATIC + SPA</span>
+                    </div>
+                    <p>
+                        Dual-engine scraper: fast static HTML parsing via <code>cheerio</code> with automated fallback
+                        to <code>puppeteer</code> headless browser rendering for complex React/Vue SPAs and e-commerce
+                        platforms.
+                    </p>
+                </div>
+
+                <!-- PDF Generator -->
+                <div class="feature-card feature-card--interactive feature-card--teal">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">📄</div>
+                        <h3 class="feature-card__title">Visual PDF Generator</h3>
+                        <span class="feature-card__badge">HTML TO PDF</span>
+                    </div>
+                    <p>
+                        The AI designs custom, responsive HTML/CSS layouts and compiles pixel-perfect A4 PDF reports,
+                        invoices, and documents directly saved to your local <code>workspace/</code>.
+                    </p>
+                </div>
+
+                <!-- Office Document Generator -->
+                <div class="feature-card feature-card--interactive feature-card--emerald">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">📊</div>
+                        <h3 class="feature-card__title">Office Generator</h3>
+                        <span class="feature-card__badge">EXCEL + WORD</span>
+                    </div>
+                    <p>
+                        Native creation of structured Excel spreadsheets (<code>.xlsx</code>) with formula support,
+                        custom styling & borders, and formatted Word documents (<code>.docx</code>) with styled
+                        typography and tables.
+                    </p>
+                </div>
+
+                <!-- AI Image Generation -->
+                <div class="feature-card feature-card--interactive feature-card--amber">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">🎨</div>
+                        <h3 class="feature-card__title">AI Image Generation</h3>
+                        <span class="feature-card__badge">TOGETHER + GROK</span>
+                    </div>
+                    <p>
+                        Direct text-to-image synthesis in chat using <strong>Together AI</strong> or <strong>X.AI
+                            (Grok)</strong> with automatic provider failover and instant visual response rendering.
+                    </p>
+                </div>
+
+                <!-- Task Management & Background Scheduler -->
+                <div class="feature-card feature-card--interactive">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">⏱️</div>
+                        <h3 class="feature-card__title">Task Scheduler</h3>
+                        <span class="feature-card__badge">AUTONOMOUS</span>
+                    </div>
+                    <p>
+                        Schedule autonomous background tasks with cron expressions or timers. Scans every 60s, executes
+                        tasks silently in the background, and sends live reports to your Telegram bot.
+                    </p>
+                </div>
+
+                <!-- Dynamic E-Commerce & Agent Skills -->
+                <div class="feature-card feature-card--interactive feature-card--teal">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">🛒</div>
+                        <h3 class="feature-card__title">Dynamic Agent Skills</h3>
+                        <span class="feature-card__badge">TOKEN SAVER</span>
+                    </div>
+                    <p>
+                        Modular Markdown skills (`agents/&lt;agentId&gt;/skills/*.md`). Pre-configured parsing rules for
+                        <strong>Amazon</strong>, <strong>Wildberries</strong>, <strong>Ozon</strong>,
+                        <strong>Temu</strong>, and <strong>List.am</strong> loaded dynamically by keyword match to save
+                        LLM tokens.
+                    </p>
+                </div>
+
+                <!-- Dual Interface -->
+                <div class="feature-card feature-card--interactive feature-card--amber">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">💬</div>
+                        <h3 class="feature-card__title">Dual Interfaces</h3>
+                        <span class="feature-card__badge">WEB UI + TELEGRAM</span>
+                    </div>
+                    <p>
+                        Modern local Web UI for desktop productivity + remote Telegram bot with
+                        <code>ALLOWED_TELEGRAM_USER_IDS</code> whitelist for safe on-the-go management.
+                    </p>
+                </div>
+
+                <!-- Hybrid Vector RAG Memory -->
+                <div class="feature-card feature-card--interactive feature-card--emerald">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">🧠</div>
+                        <h3 class="feature-card__title">Hybrid Vector Memory</h3>
+                        <span class="feature-card__badge">SQLITE + VEC</span>
+                    </div>
+                    <p>
+                        Zero external database overhead (no Docker/Postgres/Pinecone). Embedded SQLite combined with
+                        <code>sqlite-vec</code> extension for semantic vector similarity search & fast long-term memory.
+                    </p>
+                </div>
+
+                <!-- Local AI Vision -->
+                <div class="feature-card feature-card--interactive">
+                    <div class="feature-card__header">
+                        <div class="feature-card__icon">👁️</div>
+                        <h3 class="feature-card__title">Local AI Vision</h3>
+                        <span class="feature-card__badge">MULTIMEDIA</span>
+                    </div>
+                    <p>
+                        Attach images directly into the chat interface. High-performance local resizing and optimization
+                        via <code>sharp</code> before sending to multimodal LLMs.
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Real-World Automation Use Cases & Scenarios -->
+    <section id="scenarios" class="section-padding section-alt">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">🚀 Real-World Automation Scenarios</h2>
+                <p class="section-description">
+                    What can you actually build and automate with RoninAgent in your daily workflow?
+                </p>
+            </div>
+
+            <div class="content-grid--2">
+
+                <div class="use-case-card">
+                    <span class="use-case-badge">E-COMMERCE & COMPETITOR INTEL</span>
+                    <h3>
+                        🛒 Price Tracking & Market Spreadsheets
+                    </h3>
+                    <p>
+                        Scrape product specs and live prices across Amazon, Wildberries, Ozon, or Temu. The agent parses
+                        SPA JavaScript rendering silently and exports styled Excel <code>.xlsx</code> sheets with
+                        calculated price comparisons.
+                    </p>
+                </div>
+
+                <div class="use-case-card">
+                    <span class="use-case-badge">REMOTE WORKFLOWS</span>
+                    <h3>
+                        📱 Mobile Assistant via Telegram
+                    </h3>
+                    <p>
+                        Control your local AI assistant on the go. Send voice notes, photos, or prompts to your Telegram
+                        bot. Secured with user ID whitelist so only you have remote command access.
+                    </p>
+                </div>
+
+                <div class="use-case-card">
+                    <span class="use-case-badge">BUSINESS DELIVERABLES</span>
+                    <h3>
+                        📄 Instant Client PDF Reports & Word Docs
+                    </h3>
+                    <p>
+                        Turn chat discussions into styled A4 PDF documents with custom CSS styling or editable Word
+                        <code>.docx</code> contracts directly stored into your local <code>workspace/</code> directory.
+                    </p>
+                </div>
+
+                <div class="use-case-card">
+                    <span class="use-case-badge">SILENT AUTOMATION</span>
+                    <h3>
+                        ⏱️ 24/7 Background Task Monitor
+                    </h3>
+                    <p>
+                        Schedule periodic web checks or API monitors using Cron syntax. The agent runs silently in the
+                        background every 60s and pushes instant digests or alerts straight to your phone.
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Capability Showcase / Live Previews -->
+    <section id="showcase" class="section-padding">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">⚡ Interactive Capability Showcase</h2>
+                <p class="section-description">
+                    Explore how RoninAgent seamlessly executes complex multi-step workflows.
+                </p>
+            </div>
+
+            <div class="showcase-container">
+                <div class="showcase-tabs">
+                    <button class="showcase-tab active" onclick="switchShowcase(0)">🕸️ Web Scraper</button>
+                    <button class="showcase-tab" onclick="switchShowcase(1)">📄 PDF Generator</button>
+                    <button class="showcase-tab" onclick="switchShowcase(2)">📊 Excel / Word Generator</button>
+                    <button class="showcase-tab" onclick="switchShowcase(3)">⏱️ Task Scheduler</button>
+                    <button class="showcase-tab" onclick="switchShowcase(4)">🎨 Image Generator</button>
+                </div>
+
+                <!-- Tab 0: Web Scraper -->
+                <div class="showcase-panel active">
+                    <div class="showcase-grid">
+                        <div>
+                            <h4>User Prompt:</h4>
+                            <p>
+                                "Scrape the current pricing and specs of top wireless headphones on Amazon and summarize
+                                key specs."
+                            </p>
+                            <h4>Tool
+                                Execution:</h4>
+                            <ul>
+                                <li>Dynamically loads <code>skills/amazon.md</code> parsing rules.</li>
+                                <li>Calls <code>scrape_web_page({ url, renderJs: true })</code>.</li>
+                                <li>Attempts fast static extraction via <code>cheerio</code>.</li>
+                                <li>Falls back to <code>puppeteer</code> headless Chrome for SPA content.</li>
+                                <li>Strips bloat HTML & outputs clean markdown table to LLM context.</li>
+                            </ul>
+                        </div>
+                        <div class="terminal-box">
+                            <div class="terminal-header">
+                                <span>Agent output · Web scraper log</span>
+                            </div>
+                            <pre><code>[INFO] Matching skill: amazon.md (Keywords: amazon, price)
+[TOOL] Executing scrape_web_page...
+[SCRAPE] Dynamic SPA detected. Booting Headless Chrome...
+[SUCCESS] Scraped 14,250 chars. Extracted 8 items.
+[RESULT]
+| Product Name        | Price  | Rating |
+|---------------------|--------|--------|
+| Sony WH-1000XM5     | $348.00| 4.6/5  |
+| Bose QuietComfort   | $279.00| 4.5/5  |
+| Apple AirPods Max   | $449.00| 4.7/5  |</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 1: PDF Generator -->
+                <div class="showcase-panel">
+                    <div class="showcase-grid">
+                        <div>
+                            <h4>User Prompt:</h4>
+                            <p>
+                                "Create a professional A4 sales report PDF with header styles, summary table, and
+                                footer."
+                            </p>
+                            <h4>Tool
+                                Execution:</h4>
+                            <ul>
+                                <li>LLM writes custom styled HTML/CSS code snippet.</li>
+                                <li>Calls <code>generate_pdf({ html, filename: 'sales_report.pdf' })</code>.</li>
+                                <li>Renders pixel-perfect A4 PDF document using Puppeteer.</li>
+                                <li>Saves result into local <code>workspace/sales_report.pdf</code>.</li>
+                            </ul>
+                        </div>
+                        <div class="terminal-box">
+                            <div class="terminal-header">
+                                <span>Agent output · PDF generator log</span>
+                            </div>
+                            <pre><code>[TOOL] Executing generate_pdf...
+[HTML] Compiling styled template (CSS Grid, Custom Fonts)...
+[RENDER] Launching headless browser page (A4 layout)...
+[SUCCESS] Saved file to workspace/sales_report.pdf (142 KB)
+[DOWNLOAD LINK] RoninAgent/workspace/sales_report.pdf</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Excel / Word Generator -->
+                <div class="showcase-panel">
+                    <div class="showcase-grid">
+                        <div>
+                            <h4>User Prompt:</h4>
+                            <p>
+                                "Generate an Excel spreadsheet for monthly expenses with columns for Category, Budget,
+                                Actual, Difference, and SUM formulas."
+                            </p>
+                            <h4>Tool
+                                Execution:</h4>
+                            <ul>
+                                <li>Calls <code>generate_excel_document({ sheets, filename })</code> or
+                                    <code>generate_word_document</code>.
+                                </li>
+                                <li>Applies custom header cell formatting, column widths, and Excel formulas.</li>
+                                <li>Saves directly to <code>workspace/Expenses_August.xlsx</code>.</li>
+                            </ul>
+                        </div>
+                        <div class="terminal-box">
+                            <div class="terminal-header">
+                                <span>Agent output · Office generator log</span>
+                            </div>
+                            <pre><code>[TOOL] Executing generate_excel_document...
+[EXCEL] Building sheet "August Expenses" (4 columns, 12 rows)...
+[FORMULA] Applied '=SUM(C2:C11)' to total cell...
+[STYLE] Added header fill #0D1B2A and grid border styling.
+[SUCCESS] Generated workspace/Expenses_August.xlsx (18.4 KB)</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Task Scheduler -->
+                <div class="showcase-panel">
+                    <div class="showcase-grid">
+                        <div>
+                            <h4>User Prompt:</h4>
+                            <p>
+                                "Every morning at 09:00, scrape tech news, generate a summary, and send it to my
+                                Telegram channel."
+                            </p>
+                            <h4>Tool
+                                Execution:</h4>
+                            <ul>
+                                <li>Creates background task record with cron expression `0 9 * * *`.</li>
+                                <li>Internal scheduler engine scans every 60s in the background.</li>
+                                <li>Triggers autonomous workflow silently without manual intervention.</li>
+                                <li>Sends execution status report directly to user's Telegram.</li>
+                            </ul>
+                        </div>
+                        <div class="terminal-box">
+                            <div class="terminal-header">
+                                <span>Agent output · Background scheduler log</span>
+                            </div>
+                            <pre><code>[SCHEDULER] Task #42 triggered (Cron: 0 9 * * *).
+[EXECUTE] Scraping HackerNews top stories...
+[SUMMARY] Generated 5-bullet morning tech brief.
+[TELEGRAM] Sending push alert to Chat ID 849204...
+[STATUS] Task #42 completed successfully at 09:00:02.</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Image Generator -->
+                <div class="showcase-panel">
+                    <div class="showcase-grid">
+                        <div>
+                            <h4>User Prompt:</h4>
+                            <p>
+                                "Generate a futuristic cyberpunk city skyline illuminated with cyan and neon magenta
+                                lights."
+                            </p>
+                            <h4>Tool
+                                Execution:</h4>
+                            <ul>
+                                <li>Calls <code>generate_image({ prompt })</code>.</li>
+                                <li>Checks API provider priority (Together AI vs X.AI Grok).</li>
+                                <li>Synthesizes image and streams image binary back to UI & Telegram.</li>
+                            </ul>
+                        </div>
+                        <div class="terminal-box">
+                            <div class="terminal-header">
+                                <span>Agent output · Image generator log</span>
+                            </div>
+                            <pre><code>[TOOL] Executing generate_image...
+[PROVIDER] Using Together AI (Flux.1 Model)...
+[SYNTHESIS] Processing prompt...
+[SUCCESS] Generated 1024x1024 PNG image.
+[RENDER] Displaying image in chat view.</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Visual Setup & Quick Start Section -->
+    <section id="setup" class="section-padding">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">⚙️ Ultra-Simple Setup & Visual Wizard</h2>
+                <p class="section-description">
+                    No complex Docker setups or manual editing of <code>.env</code> files required. Launch in 1 minute
+                    and configure everything visually.
+                </p>
+            </div>
+
+            <!-- Setup Wizard Highlight Box -->
+            <div class="setup-wizard-box feature-card">
+                <h3 class="highlight-text">
+                    ✨ Visual Web Settings Panel (`/settings`)
+                </h3>
+                <p>
+                    When you run RoninAgent for the first time, it automatically detects missing configuration and
+                    opens the <strong>Web Setup Wizard</strong>. Easily enter your API keys (OpenRouter, Gemini, OpenAI,
+                    Together AI, Grok), set up local LLMs (Ollama, LM Studio), configure your Telegram Bot whitelist,
+                    and set HTTP basic authentication passwords visually!
+                </p>
+
+                <div class="setup-steps-grid">
+                    <div class="setup-step-card">
+                        <span class="step-num">1</span>
+                        <h4>Clone or Download</h4>
+                        <p>
+                            Clone the repository or download the ZIP archive directly from GitHub.
+                        </p>
+                    </div>
+
+                    <div class="setup-step-card">
+                        <span class="step-num">2</span>
+                        <h4>Run Setup Command</h4>
+                        <p>
+                            Run <code>npm start</code> or double-click <code>run.bat</code> on Windows.
+                        </p>
+                    </div>
+
+                    <div class="setup-step-card">
+                        <span class="step-num">3</span>
+                        <h4>Visual Web Configuration</h4>
+                        <p>
+                            Open <code>http://127.0.0.1:3000</code> in your browser. Configure API keys and settings
+                            visually!
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code Command Boxes -->
+            <div class="content-grid--2">
+                <div>
+                    <h3 class="highlight-text">Standard npm installation</h3>
+                    <p>
+                        Requires Node.js (v20+) and npm (v9+). Fast and simple:
+                    </p>
+
+                    <div class="terminal-box">
+                        <div class="terminal-header">
+                            <span>Bash · Clone and start</span>
+                            <div class="terminal-actions">
+                                <span class="terminal-dot"></span>
+                                <span class="terminal-dot"></span>
+                                <span class="terminal-dot"></span>
+                            </div>
+                        </div>
+                        <pre><code>git clone https://github.com/nordevelopment/RoninAgent.git
+cd RoninAgent
+npm install
+npm start</code></pre>
+                        <button class="btn btn--sm btn--primary copy-btn"
+                            onclick="copyCode(this)">Copy</button>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="highlight-text">Windows one-click launch (`run.bat`)</h3>
+                    <p>
+                        Download the ZIP file, extract it, and simply run the batch launcher:
+                    </p>
+
+                    <div class="terminal-box">
+                        <div class="terminal-header">
+                            <span>Command Prompt · Windows launcher</span>
+                            <div class="terminal-actions">
+                                <span class="terminal-dot"></span>
+                                <span class="terminal-dot"></span>
+                                <span class="terminal-dot"></span>
+                            </div>
+                        </div>
+                        <pre><code># Double-click 'run.bat' in the project directory
+# Or execute from command prompt:
+.\run.bat</code></pre>
+                        <button class="btn btn--sm btn--primary copy-btn"
+                            onclick="copyCode(this)">Copy</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- Comparison Section -->
+    <section id="comparison" class="section-padding">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">⚖️ Features & Performance Comparison</h2>
+                <p class="section-description">
+                    Compare RoninAgent with heavyweight alternatives. Raw performance metrics prove its efficiency on
+                    local hardware.
+                </p>
+            </div>
+
+            <div class="data-table-wrapper">
+                <table class="data-table data-table--striped data-table--bordered">
+                    <thead>
+                        <tr>
+                            <th>Metric / Feature</th>
+                            <th class="highlight-text">⚔️ RoninAgent</th>
+                            <th>🐳 Open WebUI</th>
+                            <th>💬 LibreChat</th>
+                            <th>📦 AnythingLLM</th>
+                            <th>🦞 OpenClaw</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="row-highlight">
+                            <td><strong>RAM Footprint</strong></td>
+                            <td><span class="advantage-badge">~100–150 MB</span></td>
+                            <td>1.5 GB+ (Docker)</td>
+                            <td>1 GB+ (Docker Compose)</td>
+                            <td>500 MB+ (Electron/Docker)</td>
+                            <td>200 MB+ (pnpm/Docker)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Startup Time</strong></td>
+                            <td><span class="advantage-badge">1–3 seconds</span></td>
+                            <td>30 - 60 seconds</td>
+                            <td>30 - 60 seconds</td>
+                            <td>10 - 20 seconds</td>
+                            <td>5 - 10 seconds</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Visual Setup Wizard</strong></td>
+                            <td><span class="advantage-badge">Yes (`/settings` UI)</span></td>
+                            <td>Partial</td>
+                            <td>No (Manual Config)</td>
+                            <td>Yes</td>
+                            <td>No</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Installation</strong></td>
+                            <td><span class="advantage-badge">&lt; 1 min (1 Command / `run.bat`)</span></td>
+                            <td>5+ min (Docker)</td>
+                            <td>10+ min (Compose)</td>
+                            <td>5+ min (Installer)</td>
+                            <td>5+ min (pnpm)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Web Scraper (Static + SPA)</strong></td>
+                            <td><span class="advantage-badge">Built-in (Cheerio + Puppeteer)</span></td>
+                            <td>Requires Plugin</td>
+                            <td>Requires Plugin</td>
+                            <td>Basic Static</td>
+                            <td>Built-in</td>
+                        </tr>
+                        <tr>
+                            <td><strong>PDF / Office Doc Generator</strong></td>
+                            <td><span class="advantage-badge">Built-in (PDF, XLSX, DOCX)</span></td>
+                            <td>No</td>
+                            <td>No</td>
+                            <td>No</td>
+                            <td>No</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Task Scheduler (Cron/Timer)</strong></td>
+                            <td><span class="advantage-badge">Built-in (60s Background Engine)</span></td>
+                            <td>No</td>
+                            <td>No</td>
+                            <td>No</td>
+                            <td>Built-in</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Database Overhead</strong></td>
+                            <td>SQLite + `sqlite-vec` (Embedded)</td>
+                            <td>PostgreSQL / MySQL</td>
+                            <td>MongoDB + Meilisearch</td>
+                            <td>Vector DB + SQLite</td>
+                            <td>SQLite (embedded)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="section-padding">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">❓ Frequently Asked Questions</h2>
+                <p class="section-description">
+                    Everything you need to know about running and self-hosting RoninAgent.
+                </p>
+            </div>
+
+            <div class="faq-grid">
+                <div class="faq-card">
+                    <h4>Do I need a powerful GPU or local LLM hardware?</h4>
+                    <p>
+                        No GPU required! You can run RoninAgent using lightweight cloud models (Google Gemini,
+                        OpenRouter, OpenAI, X.AI Grok) or run local open-weights LLMs via Ollama or LM Studio. It runs
+                        fast on any laptop.
+                    </p>
+                </div>
+
+                <div class="faq-card">
+                    <h4>Where are my chat data and memory stored?</h4>
+                    <p>
+                        Conversation history, settings, memory, and generated files are stored locally. Requests are
+                        sent only to the AI providers and integrations you configure, such as OpenAI, Gemini,
+                        OpenRouter, or Telegram.
+                    </p>
+                </div>
+
+                <div class="faq-card">
+                    <h4>How does RoninAgent differ from Open WebUI or AnythingLLM?</h4>
+                    <p>
+                        While typical Web UIs are simple chat interfaces, RoninAgent is a full <strong>autonomous
+                            tool-executing agent</strong>. It generates styled A4 PDFs, native Excel/Word documents,
+                        scrapes dynamic web pages, and executes background scheduled tasks with a 1–3 second startup
+                        time (~100–150 MB RAM vs 1.5 GB+ Docker containers).
+                    </p>
+                </div>
+
+                <div class="faq-card">
+                    <h4>How difficult is the installation?</h4>
+                    <p>
+                        It takes under 1 minute. Simply run <code>npm start</code> or double-click <code>run.bat</code>
+                        on Windows. The visual <strong>Web Setup Wizard</strong> (<code>/settings</code>) opens
+                        automatically so you can configure API keys in your browser without touching code or
+                        <code>.env</code> files.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Support Section -->
+    <section id="support" class="section-padding support-section">
+        <div class="container">
+            <h2 class="section-title">💖 Support RoninAgent</h2>
+            <p class="hero-subtitle">
+                RoninAgent is 100% open-source and free under the MIT License. If it saved your hardware resources and
+                boosted your AI workflow, consider supporting our project!
+            </p>
+            <a href="https://github.com/sponsors/nordevelopment" class="btn btn--primary btn--lg support-section__cta"
+                target="_blank">
+                <span>Sponsor on GitHub</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="container">
+            <p><strong class="highlight-text">RoninAgent</strong></p>
+            <p>Author: Norayr Petrosyan</p>
+            <p>Licensed under MIT // © 2024 - 2026 Nordevelopment</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // Copy Code Utility
+        function copyCode(btn) {
+            const pre = btn.previousElementSibling;
+            const code = pre.querySelector('code') ? pre.querySelector('code').innerText : pre.innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<span>Copied</span>';
+                btn.style.borderColor = 'var(--accent-emerald)';
+                btn.style.color = 'var(--accent-emerald)';
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.borderColor = '';
+                    btn.style.color = '';
+                }, 2000);
+            });
+        }
+
+        // Showcase Tab Switcher
+        function switchShowcase(index) {
+            const tabs = document.querySelectorAll('.showcase-tab');
+            const panels = document.querySelectorAll('.showcase-panel');
+            tabs.forEach((tab, i) => {
+                tab.classList.toggle('active', i === index);
+            });
+            panels.forEach((panel, i) => {
+                panel.classList.toggle('active', i === index);
+            });
+        }
+    </script>
+
+    <!-- Mobile Nav Toggle -->
+    <script>
+        (function () {
+            const themeSelect = document.querySelector('.theme-select');
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+
+            if (themeSelect) {
+                themeSelect.value = currentTheme;
+                themeSelect.addEventListener('change', (event) => {
+                    const nextTheme = event.target.value === 'light' ? 'light' : 'dark';
+                    document.documentElement.setAttribute('data-theme', nextTheme);
+                    try {
+                        localStorage.setItem('ronin-theme', nextTheme);
+                    } catch (_) {
+                        // Theme still applies for the current page when storage is unavailable.
+                    }
+                });
+            }
+
+            const burger = document.getElementById('navBurger');
+            const links = document.getElementById('navLinks');
+            if (!burger || !links) return;
+
+            burger.addEventListener('click', () => {
+                const isOpen = burger.classList.toggle('site-nav__burger--open');
+                links.classList.toggle('site-nav__links--open', isOpen);
+                burger.setAttribute('aria-expanded', isOpen);
+            });
+
+            // Close menu on link click
+            links.querySelectorAll('.site-nav__link').forEach(link => {
+                link.addEventListener('click', () => {
+                    burger.classList.remove('site-nav__burger--open');
+                    links.classList.remove('site-nav__links--open');
+                    burger.setAttribute('aria-expanded', 'false');
+                });
+            });
+
+            // Close menu on outside click
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.site-nav')) {
+                    burger.classList.remove('site-nav__burger--open');
+                    links.classList.remove('site-nav__links--open');
+                    burger.setAttribute('aria-expanded', 'false');
+                }
+            });
+        })();
+    </script>
+</body>
+
+</html>
